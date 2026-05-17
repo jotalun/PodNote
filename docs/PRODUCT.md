@@ -1,6 +1,6 @@
 # PodNote Desktop 产品说明
 
-版本：`0.6.1`  
+版本：`0.7.0`  
 更新日期：2026-05-18
 
 ## 产品定位
@@ -32,7 +32,7 @@ PodNote 是一个面向播客重度用户的知识整理工具。它把播客网
 主流程被压缩成三步：
 
 1. 粘贴播客网页或 RSS 链接并解析。
-2. 粘贴 transcript 并用 DeepSeek 分析。
+2. 自动查找公开 transcript；没有的话手动粘贴。
 3. 下载 Markdown。
 
 ### 2. 视觉风格
@@ -63,11 +63,23 @@ https://podcast.latepost.com/164
 
 ### 4. Transcript-first 工作流
 
-产品默认把 transcript 当作原始材料。中间有一个明确的 `Transcript` 输入区，可以手动粘贴节目转写文本。
+产品默认把 transcript 当作原始材料。中间有一个明确的 `Transcript` 输入区，可以自动查找公开文字稿，也可以手动粘贴节目转写文本。
 
 生成笔记时，系统会基于这里的 transcript 来整理内容，而不是只根据节目标题或简介生成摘要。
 
-### 5. 中文字幕与时间线
+### 5. 自动查找 transcript
+
+点击 `自动查找` 后，PodNote 会按顺序检查：
+
+- RSS 单集里的标准 `podcast:transcript` 标签。
+- RSS 单集里的字幕 / 文字稿链接。
+- 单集网页里的 transcript、字幕、文字稿、VTT、SRT 或纯文本链接。
+
+如果找到，会自动填入 transcript 输入区，并刷新左侧字幕预览和右侧 Markdown 草稿。
+
+如果没有找到，会提示这期节目没有公开 transcript，需要手动粘贴，或后续接入语音转写服务生成。
+
+### 6. 中文字幕与时间线
 
 中间区域展示逐句 transcript，每一句带时间戳。当前支持：
 
@@ -77,7 +89,7 @@ https://podcast.latepost.com/164
 
 导入真实 RSS 后，点击 transcript 时间戳会跳转到音频对应位置。
 
-### 6. 真实音频播放器
+### 7. 真实音频播放器
 
 导入 RSS 后，如果单集里有音频 enclosure，播放器会连接真实音频。
 
@@ -90,13 +102,13 @@ https://podcast.latepost.com/164
 - 进度条拖动
 - 自动显示当前播放时间和总时长
 
-### 7. 本地规则整理
+### 8. 本地规则整理
 
 如果没有配置 DeepSeek API Key，点击 `本地整理` 可以先用本地规则生成 Markdown。
 
 本地规则适合做原型预览，但不等同于真正 AI 分析。
 
-### 8. DeepSeek 分析
+### 9. DeepSeek 分析
 
 部署版配置好 Cloudflare 环境变量 `DEEPSEEK_API_KEY` 后，点击 `DeepSeek 分析`，系统会把当前 transcript 发给后端，再由后端调用 DeepSeek。
 
@@ -115,13 +127,13 @@ DeepSeek 会生成适合 Obsidian 的 Markdown，包含：
 - 值得回听的原声摘录
 - 可建立的双链
 
-### 9. Markdown 下载
+### 10. Markdown 下载
 
 右侧可以复制或下载 Markdown。
 
 当前主界面不再提供本机 Obsidian Vault 写入，避免部署版和本地版概念混在一起。生成笔记后直接下载 `.md` 文件，再放入 Obsidian。
 
-### 10. 本地后端代理
+### 11. 本地后端代理
 
 当前版本新增了本地服务 `server.js`。
 
@@ -130,13 +142,14 @@ DeepSeek 会生成适合 Obsidian 的 Markdown，包含：
 - 托管本地网页。
 - 抓取播客网页并自动发现 RSS。
 - 抓取 RSS。
+- 查找公开 transcript。
 - 代理 DeepSeek 请求。
 - 提供本地开发时的静态服务和 API 代理。
 - 提供健康检查接口 `/api/health`。
 
 这样做的原因是：API Key 不应该直接暴露在前端请求里。
 
-### 11. Cloudflare 线上版
+### 12. Cloudflare 线上版
 
 当前项目已经支持部署到 Cloudflare Pages。
 
@@ -144,6 +157,7 @@ DeepSeek 会生成适合 Obsidian 的 Markdown，包含：
 
 - 网页界面。
 - RSS 抓取。
+- 公开 transcript 查找。
 - DeepSeek 分析。
 - Markdown 下载。
 
@@ -185,7 +199,9 @@ http://127.0.0.1:4174/?rss=http%3A%2F%2F127.0.0.1%3A4174%2Ffixtures%2Fsample-fee
 
 ### 第三步：准备 transcript
 
-如果你已经导入播客，可以先播放真实音频。然后在 `Transcript` 输入区粘贴完整转写文本。
+如果你已经导入播客，可以先点 `自动查找`。
+
+如果节目 RSS 或网页公开了 transcript，系统会自动填入。没有公开 transcript 时，再在 `Transcript` 输入区手动粘贴完整转写文本。
 
 建议格式：
 
@@ -210,7 +226,8 @@ http://127.0.0.1:4174/?rss=http%3A%2F%2F127.0.0.1%3A4174%2Ffixtures%2Fsample-fee
 ## 当前限制
 
 - OPML 暂时不在主界面显示。
-- Transcript 主要依赖手动粘贴，还没有接 Whisper 或转写 API。
+- `自动查找` 只能获取节目方已经公开的 transcript，不能把音频直接转成文字。
+- 还没有接 Whisper 或第三方语音转写 API。
 - 线上版依赖 Cloudflare 环境变量 `DEEPSEEK_API_KEY`。
 - 还没有打包成真正的 Mac/Windows 桌面 App。
 
@@ -221,8 +238,8 @@ http://127.0.0.1:4174/?rss=http%3A%2F%2F127.0.0.1%3A4174%2Ffixtures%2Fsample-fee
 1. 找一集你喜欢的播客。
 2. 复制它的单集网页或 RSS 地址并解析。
 3. 播放音频确认单集无误。
-4. 用任意工具先拿到 transcript。
-5. 把 transcript 粘进输入区。
+4. 点击 `自动查找`。
+5. 如果没有公开 transcript，再用任意转写工具拿到 transcript 并粘进输入区。
 6. 确认 Cloudflare 已经配置 `DEEPSEEK_API_KEY`。
 7. 点击 `DeepSeek 分析`。
 8. 检查生成的 Markdown。

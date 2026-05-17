@@ -62,7 +62,7 @@ async function fetchText(url, signal) {
   const upstream = await fetch(url, {
     headers: {
       Accept: "application/rss+xml, application/atom+xml, application/xml, text/xml, text/html, */*",
-      "User-Agent": "PodNote/0.6.1"
+      "User-Agent": "PodNote/0.7.0"
     },
     signal
   });

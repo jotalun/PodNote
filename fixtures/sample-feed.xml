@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<rss version="2.0" xmlns:itunes="http://www.itunes.com/dtds/podcast-1.0.dtd">
+<rss version="2.0" xmlns:itunes="http://www.itunes.com/dtds/podcast-1.0.dtd" xmlns:podcast="https://podcastindex.org/namespace/1.0">
   <channel>
     <title>PodNote 示例播客</title>
     <description>用于本地测试 RSS 导入和音频播放器的示例 feed。</description>
@@ -9,6 +9,7 @@
       <description><![CDATA[这是一条示例 RSS 单集，用来验证真实导入流程。你可以播放音频、粘贴 transcript，再用 DeepSeek 生成笔记。]]></description>
       <pubDate>Sun, 17 May 2026 10:00:00 +1000</pubDate>
       <itunes:duration>00:02:10</itunes:duration>
+      <podcast:transcript url="/fixtures/sample-transcript.vtt" type="text/vtt" />
       <enclosure url="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3" type="audio/mpeg" length="1000000" />
     </item>
   </channel>

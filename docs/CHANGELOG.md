@@ -1,5 +1,19 @@
 # 更新记录
 
+## 0.7.0 - 2026-05-18
+
+### 新增
+
+- 新增 `/api/transcript`，可以从 RSS 标准 `podcast:transcript` 标签读取文字稿。
+- 新增单集网页 transcript 自动发现，支持常见的文字稿、字幕、VTT、SRT、纯文本链接。
+- 新增 `自动查找` 按钮，找到公开 transcript 后会自动填入输入区并刷新字幕预览和 Markdown 草稿。
+- 新增本地示例 transcript fixture，用于验证 RSS transcript 流程。
+
+### 改进
+
+- 如果节目没有公开 transcript，会明确提示需要接入语音转写服务或手动粘贴，不再让用户以为 RSS 一定包含文字稿。
+- 文档更新到 `0.7.0`，说明 transcript 查找和语音转写的边界。
+
 ## 0.6.1 - 2026-05-18
 
 ### 修复

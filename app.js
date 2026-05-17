@@ -75,6 +75,8 @@ const noteOutput = document.querySelector("#noteOutput");
 const toast = document.querySelector("#toast");
 const analysisStatus = document.querySelector("#analysisStatus");
 const deepseekButton = document.querySelector("#deepseekButton");
+const fetchTranscriptButton = document.querySelector("#fetchTranscriptButton");
+const transcriptStatus = document.querySelector("#transcriptStatus");
 const audioPlayer = document.querySelector("#audioPlayer");
 const audioStatus = document.querySelector("#audioStatus");
 
@@ -112,19 +114,9 @@ function renderEpisode() {
   document.querySelector("#currentTime").textContent = progressToTime(activeEpisode.progress, activeEpisode.duration);
   setCoverBackground(document.querySelector("#coverArt"), activeEpisode);
 
-  const transcriptRows = activeEpisode.transcript?.length ? activeEpisode.transcript : [["00:00", "请先粘贴 transcript，或接入转写后再生成笔记。", ""]];
-  transcriptEl.innerHTML = transcriptRows
-    .map(
-      ([time, line, english], index) => `
-        <button class="line ${index === 2 ? "active" : ""}" type="button" data-time="${time}">
-          <time>${time}</time>
-          <p>${line}${bilingual ? `<small>${english}</small>` : ""}</p>
-        </button>
-      `
-    )
-    .join("");
-
   rawTranscript.value = getEpisodeTranscriptText(activeEpisode);
+  renderTranscriptPreview();
+  updateTranscriptStatus();
   chaptersEl.innerHTML = activeEpisode.chapters
     .map(
       ([time, title, summary]) => `
@@ -146,6 +138,38 @@ function getEpisodeTranscriptText(episode) {
   if (typeof episode.rawTranscript === "string") return episode.rawTranscript;
   if (episode.hasTranscript === false) return "";
   return (episode.transcript || []).map(([time, line]) => `[${time}] ${line}`).join("\n");
+}
+
+function renderTranscriptPreview() {
+  const transcriptRows = activeEpisode.transcript?.length ? activeEpisode.transcript : [["00:00", "请先粘贴 transcript，或点击自动查找公开文字稿。", ""]];
+  transcriptEl.innerHTML = transcriptRows
+    .map(
+      ([time, line, english], index) => `
+        <button class="line ${index === 2 ? "active" : ""}" type="button" data-time="${time}">
+          <time>${time}</time>
+          <p>${line}${bilingual && english ? `<small>${english}</small>` : ""}</p>
+        </button>
+      `
+    )
+    .join("");
+}
+
+function updateTranscriptStatus(message = "") {
+  const hasText = Boolean(rawTranscript.value.trim());
+  document.querySelector("#stepTranscript").classList.toggle("done", hasText);
+
+  if (message) {
+    transcriptStatus.textContent = message;
+    return;
+  }
+
+  if (hasText) {
+    const lineCount = rawTranscript.value.split("\n").filter(Boolean).length;
+    transcriptStatus.textContent = `已载入 transcript，共 ${lineCount} 行。`;
+    return;
+  }
+
+  transcriptStatus.textContent = activeEpisode.transcriptStatus || "这期还没有 transcript。可以自动查找公开文字稿，或手动粘贴。";
 }
 
 function setCoverBackground(element, episode) {
@@ -184,7 +208,8 @@ function generateNote() {
   const template = document.querySelector("#templateSelect").value;
   const tags = document.querySelector("#tagInput").value;
   const chapterList = activeEpisode.chapters.map(([time, title, summary]) => `- [${time}] ${title}：${summary}`).join("\n");
-  const transcriptText = rawTranscript.value.trim() || activeEpisode.transcript.map(([time, line]) => `[${time}] ${line}`).join("\n");
+  const fallbackTranscript = activeEpisode.hasTranscript === false ? "" : activeEpisode.transcript.map(([time, line]) => `[${time}] ${line}`).join("\n");
+  const transcriptText = rawTranscript.value.trim() || fallbackTranscript;
   const transcriptLines = transcriptText.split("\n").filter(Boolean);
   const quoteList = transcriptLines.slice(0, 6).map((line) => `> ${line}`).join("\n\n");
   const extractedPoints = buildPointsFromTranscript(transcriptText);
@@ -444,6 +469,86 @@ async function analyzeWithDeepSeek() {
   }
 }
 
+async function fetchTranscriptForActiveEpisode() {
+  if (!activeEpisode.audioUrl && !activeEpisode.webUrl && !activeEpisode.sourceUrl && !activeEpisode.transcriptUrl) {
+    showToast("请先导入一集播客");
+    return;
+  }
+
+  fetchTranscriptButton.disabled = true;
+  fetchTranscriptButton.textContent = "查找中";
+  updateTranscriptStatus("正在查找 RSS 或网页里的公开 transcript...");
+
+  try {
+    const params = new URLSearchParams();
+    appendParam(params, "feedUrl", activeEpisode.sourceUrl);
+    appendParam(params, "episodeUrl", activeEpisode.webUrl);
+    appendParam(params, "audioUrl", activeEpisode.audioUrl);
+    appendParam(params, "transcriptUrl", activeEpisode.transcriptUrl);
+    appendParam(params, "title", activeEpisode.title);
+
+    const response = await fetch(`/api/transcript?${params.toString()}`);
+    const data = await response.json();
+    if (!response.ok || !data.transcript) {
+      throw new Error(data.message || data.error || "没有找到公开 transcript");
+    }
+
+    applyTranscript(data.transcript, data);
+    showToast("已找到并载入 transcript");
+  } catch (error) {
+    const message = error.message || "没有找到公开 transcript";
+    activeEpisode.transcriptStatus = `${message} 后续可以接入语音转写服务自动生成。`;
+    updateTranscriptStatus(activeEpisode.transcriptStatus);
+    showToast("没有找到公开 transcript");
+  } finally {
+    fetchTranscriptButton.disabled = false;
+    fetchTranscriptButton.textContent = "自动查找";
+  }
+}
+
+function appendParam(params, key, value) {
+  if (value) params.set(key, value);
+}
+
+function applyTranscript(text, source) {
+  activeEpisode.rawTranscript = text;
+  activeEpisode.hasTranscript = true;
+  activeEpisode.transcript = transcriptTextToRows(text);
+  activeEpisode.transcriptSource = source.url || source.sourceType || "public-transcript";
+  rawTranscript.value = text;
+  renderTranscriptPreview();
+  updateTranscriptStatus(`已从${transcriptSourceLabel(source.sourceType)}载入 transcript。`);
+  generateNote();
+}
+
+function transcriptSourceLabel(sourceType = "") {
+  const labels = {
+    "provided-transcript": " RSS 文字稿",
+    "rss-transcript": " RSS 文字稿",
+    "rss-inline-transcript": " RSS 内嵌文字稿",
+    "episode-page": "单集网页",
+    "episode-page-link": "单集网页链接"
+  };
+  return labels[sourceType] || "公开来源";
+}
+
+function transcriptTextToRows(text) {
+  const lines = String(text || "")
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean);
+
+  if (!lines.length) {
+    return [["00:00", "请先粘贴 transcript，或点击自动查找公开文字稿。", ""]];
+  }
+
+  return lines.slice(0, 120).map((line) => {
+    const match = line.match(/^\[?(\d{1,2}:\d{2}(?::\d{2})?)\]?\s*(.*)$/);
+    if (match) return [match[1], match[2] || line, ""];
+    return ["00:00", line, ""];
+  });
+}
+
 async function exportToObsidian() {
   downloadMarkdown();
   updatePipeline("exported");
@@ -529,7 +634,8 @@ function parsePodcastFeed(xml, sourceUrl) {
       const duration = normalizeDuration(readFirstText(item, ["itunes:duration", "duration"]));
       const image = readImage(item) || showImage;
       const pubDate = readFirstText(item, ["pubDate", "published", "updated"]);
-      const webUrl = readEpisodePageUrl(item);
+      const webUrl = resolveUrl(readEpisodePageUrl(item), sourceUrl);
+      const transcriptUrl = resolveUrl(readTranscriptUrl(item), sourceUrl);
 
       return {
         id: `rss-${hashString(`${sourceUrl}-${webUrl || title}-${index}`)}`,
@@ -543,6 +649,7 @@ function parsePodcastFeed(xml, sourceUrl) {
         audioUrl,
         pubDate,
         webUrl,
+        transcriptUrl,
         sourceUrl,
         hasTranscript: false,
         rawTranscript: "",
@@ -621,6 +728,24 @@ function readEpisodePageUrl(item) {
 
   const guid = readFirstText(item, ["guid", "id"]);
   return /^https?:\/\//.test(guid) ? guid : "";
+}
+
+function readTranscriptUrl(item) {
+  const transcriptNode = [...item.getElementsByTagName("*")].find((element) => {
+    const name = `${element.prefix ? `${element.prefix}:` : ""}${element.localName || element.tagName}`.toLowerCase();
+    return name.endsWith("transcript") && (element.getAttribute("url") || element.getAttribute("href") || element.getAttribute("src"));
+  });
+
+  return transcriptNode?.getAttribute("url") || transcriptNode?.getAttribute("href") || transcriptNode?.getAttribute("src") || "";
+}
+
+function resolveUrl(value, baseUrl) {
+  if (!value) return "";
+  try {
+    return new URL(value, baseUrl).href;
+  } catch {
+    return value;
+  }
 }
 
 function stripHtml(value) {
@@ -716,12 +841,17 @@ document.querySelector("#templateSelect").addEventListener("change", generateNot
 document.querySelector("#tagInput").addEventListener("input", generateNote);
 rawTranscript.addEventListener("input", () => {
   activeEpisode.rawTranscript = rawTranscript.value;
+  activeEpisode.hasTranscript = Boolean(rawTranscript.value.trim());
+  activeEpisode.transcript = transcriptTextToRows(rawTranscript.value);
+  renderTranscriptPreview();
+  updateTranscriptStatus();
   generateNote();
 });
 
 document.querySelector("#saveSettingsButton").addEventListener("click", saveSettings);
 document.querySelector("#opmlInput").addEventListener("change", handleOpmlImport);
 deepseekButton.addEventListener("click", analyzeWithDeepSeek);
+fetchTranscriptButton.addEventListener("click", fetchTranscriptForActiveEpisode);
 
 document.querySelector("#copyButton").addEventListener("click", async () => {
   await navigator.clipboard.writeText(noteOutput.value);

@@ -1,6 +1,6 @@
 # Cloudflare 部署说明
 
-版本：`0.6.1`  
+版本：`0.7.0`  
 更新日期：2026-05-18
 
 ## 线上版能做什么
@@ -9,6 +9,7 @@ Cloudflare 线上版支持：
 
 - 打开网页界面。
 - 通过 `/api/rss` 抓取 RSS，或从播客网页自动发现 RSS。
+- 通过 `/api/transcript` 查找公开 transcript。
 - 通过 `/api/analyze` 调用 DeepSeek。
 - 生成和下载 Markdown。
 
@@ -153,7 +154,7 @@ Root directory: /
 
 1. 粘贴播客网页或 RSS 地址并解析。
 2. 播放音频。
-3. 粘贴 transcript。
+3. 点击 `自动查找` 获取公开 transcript；没有的话手动粘贴。
 4. 点击 `DeepSeek 分析`。
 5. 下载 Markdown。
 

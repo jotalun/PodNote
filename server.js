@@ -1,6 +1,7 @@
 import { createServer } from "node:http";
 import { readFile, writeFile, mkdir } from "node:fs/promises";
 import { extname, join, resolve } from "node:path";
+import { findTranscript } from "./lib/transcript.js";
 
 const root = resolve(".");
 const port = Number(process.env.PORT || 4174);
@@ -32,6 +33,11 @@ createServer(async (request, response) => {
 
     if (request.method === "GET" && url.pathname === "/api/rss") {
       await handleRss(url, response);
+      return;
+    }
+
+    if (request.method === "GET" && url.pathname === "/api/transcript") {
+      await handleTranscript(url, response);
       return;
     }
 
@@ -114,6 +120,30 @@ async function handleRss(url, response) {
   }
 }
 
+async function handleTranscript(url, response) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 20000);
+
+  try {
+    const result = await findTranscript(
+      {
+        feedUrl: url.searchParams.get("feedUrl"),
+        episodeUrl: url.searchParams.get("episodeUrl"),
+        audioUrl: url.searchParams.get("audioUrl"),
+        transcriptUrl: url.searchParams.get("transcriptUrl"),
+        title: url.searchParams.get("title")
+      },
+      { signal: controller.signal }
+    );
+    sendJson(response, result.ok ? 200 : 404, result);
+  } catch (error) {
+    const message = error.name === "AbortError" ? "transcript 查找超时" : error.message || "transcript 查找失败";
+    sendJson(response, 502, { ok: false, error: message });
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 async function fetchFeedOrDiscover(inputUrl, signal) {
   const first = await fetchText(inputUrl, signal);
   if (looksLikeFeed(first.text)) {
@@ -143,7 +173,7 @@ async function fetchText(url, signal) {
   const upstream = await fetch(url, {
     headers: {
       Accept: "application/rss+xml, application/atom+xml, application/xml, text/xml, text/html, */*",
-      "User-Agent": "PodNote/0.6.1"
+      "User-Agent": "PodNote/0.7.0"
     },
     signal
   });

@@ -1,0 +1,10 @@
+WEBVTT
+
+00:00.000 --> 00:06.000
+欢迎来到 PodNote 示例播客，这一段文字来自 RSS 里的 transcript 标签。
+
+00:06.000 --> 00:13.000
+PodNote 会先检查节目是否公开了文字稿，如果有，就自动填入 transcript 输入区。
+
+00:13.000 --> 00:21.000
+接下来你可以用 DeepSeek 分析这份 transcript，并下载适合 Obsidian 的 Markdown 笔记。

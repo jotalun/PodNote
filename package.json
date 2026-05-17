@@ -1,6 +1,6 @@
 {
   "name": "podnote-desktop",
-  "version": "0.6.1",
+  "version": "0.7.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -8,6 +8,6 @@
     "build": "npm run build:pages",
     "build:pages": "node scripts/build-pages.js",
     "deploy:cloudflare": "npm run build:pages && npx wrangler pages deploy dist",
-    "check": "node --check app.js && node --check server.js && node --check functions/api/analyze.js && node --check functions/api/rss.js && node --check functions/api/health.js && node --check scripts/build-pages.js"
+    "check": "node --check app.js && node --check server.js && node --check lib/transcript.js && node --check functions/api/analyze.js && node --check functions/api/rss.js && node --check functions/api/transcript.js && node --check functions/api/health.js && node --check scripts/build-pages.js"
   }
 }

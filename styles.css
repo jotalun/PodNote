@@ -570,6 +570,13 @@ input[type="range"] {
   gap: 13px;
 }
 
+.transcript-helper {
+  margin-top: -4px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
 .raw-transcript,
 .note-output {
   resize: vertical;
