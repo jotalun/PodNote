@@ -1,5 +1,17 @@
 # 更新记录
 
+## 0.5.1 - 2026-05-18
+
+### 改进
+
+- 新增标准构建脚本 `npm run build`，内部调用 `npm run build:pages`。
+- 部署文档改用 `npm run build` 作为 Cloudflare Pages Build command。
+- 部署文档新增 `Output directory "dist" not found` 故障说明。
+
+### 修复
+
+- 解释 Cloudflare Pages 因未设置 Build command 跳过构建，导致找不到 `dist/` 的部署失败问题。
+
 ## 0.5.0 - 2026-05-18
 
 ### 新增

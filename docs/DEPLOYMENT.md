@@ -1,6 +1,6 @@
 # Cloudflare 部署说明
 
-版本：`0.5.0`  
+版本：`0.5.1`  
 更新日期：2026-05-18
 
 ## 线上版能做什么
@@ -29,7 +29,7 @@ Cloudflare 线上版不支持：
 ## 本地构建
 
 ```bash
-npm run build:pages
+npm run build
 ```
 
 构建产物会进入：
@@ -93,7 +93,7 @@ npx wrangler pages secret put DEEPSEEK_API_KEY --project-name podnote-desktop
 如果通过 Dashboard 连接 Git 仓库，推荐设置：
 
 ```text
-Build command: npm run build:pages
+Build command: npm run build
 Build output directory: dist
 Root directory: /
 ```
@@ -103,6 +103,35 @@ Functions 目录保持默认：
 ```text
 functions/
 ```
+
+## 常见部署错误
+
+### Output directory "dist" not found
+
+如果日志里出现：
+
+```text
+No build command specified. Skipping build step.
+Error: Output directory "dist" not found.
+```
+
+说明 Cloudflare 没有运行构建命令，所以仓库里的源文件没有被复制到 `dist/`。
+
+修复方式：
+
+1. 进入 Cloudflare Pages 项目。
+2. 打开 `Settings → Build & deployments`。
+3. 设置：
+
+```text
+Build command: npm run build
+Build output directory: dist
+Root directory: /
+```
+
+4. 保存后重新部署。
+
+注意：`dist/` 是构建产物，不提交到 Git。Cloudflare 必须先运行 `npm run build`，才会生成这个目录。
 
 ## 线上使用方式
 
