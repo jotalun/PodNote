@@ -1,6 +1,6 @@
 # Cloudflare 部署说明
 
-版本：`0.5.1`  
+版本：`0.5.2`  
 更新日期：2026-05-18
 
 ## 线上版能做什么
@@ -105,6 +105,22 @@ functions/
 ```
 
 ## 常见部署错误
+
+### Can't set compatibility date in the future
+
+如果日志里出现：
+
+```text
+Error: Failed to publish your Function. Got error: Can't set compatibility date in the future: 2026-05-18
+```
+
+说明 Cloudflare 发布 Function 时使用 UTC 日期判断，而本地时区可能已经进入下一天。当前项目把 `wrangler.toml` 的 `compatibility_date` 固定为：
+
+```text
+2026-05-17
+```
+
+重新部署即可。
 
 ### Output directory "dist" not found
 

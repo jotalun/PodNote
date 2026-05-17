@@ -1,5 +1,12 @@
 # 更新记录
 
+## 0.5.2 - 2026-05-18
+
+### 修复
+
+- 将 `wrangler.toml` 的 `compatibility_date` 从 `2026-05-18` 改为 `2026-05-17`，避免 Cloudflare 按 UTC 判断时认为日期在未来。
+- 部署文档新增 `Can't set compatibility date in the future` 故障说明。
+
 ## 0.5.1 - 2026-05-18
 
 ### 改进

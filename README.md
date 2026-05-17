@@ -2,7 +2,7 @@
 
 一个 transcript-first 的播客知识工作台原型：先拿到完整转写，再用 DeepSeek 整理成适合 Obsidian 的 Markdown 笔记。
 
-当前版本：`0.5.1`
+当前版本：`0.5.2`
 
 ## 文档入口
 
