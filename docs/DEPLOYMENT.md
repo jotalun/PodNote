@@ -1,6 +1,6 @@
 # Cloudflare 部署说明
 
-版本：`0.8.1`  
+版本：`0.9.0`  
 更新日期：2026-05-18
 
 ## 线上版能做什么
@@ -13,6 +13,7 @@ Cloudflare 线上版支持：
 - 通过 `/api/transcribe` 调用 OpenAI 生成 transcript。
 - 通过 `/api/analyze` 调用 DeepSeek。
 - 生成和下载 Markdown。
+- 用访问密码保护未完善的预览版本。
 
 Cloudflare 线上版不支持直接写入你电脑里的 Obsidian Vault。当前主流程统一为下载 Markdown。
 
@@ -23,6 +24,7 @@ Cloudflare 线上版不支持直接写入你电脑里的 Obsidian Vault。当前
 - Cloudflare 账号。
 - DeepSeek API Key。
 - OpenAI API Key，用于没有公开 transcript 时生成文字稿。
+- 访问密码，默认是 `123456`。
 - 本机可以运行 `npx wrangler`。
 
 ## 本地构建
@@ -111,6 +113,22 @@ npx wrangler pages secret put OPENAI_API_KEY --project-name podnote-desktop
 
 设置后重新部署一次。
 
+## 设置访问密码
+
+当前默认密码是：
+
+```text
+123456
+```
+
+如果要改密码，在 Cloudflare 环境变量里添加：
+
+```text
+PODNOTE_PASSWORD
+```
+
+类型可以设为 Secret，值填你的新密码。设置后重新部署一次。
+
 ## Cloudflare 项目设置
 
 如果通过 Dashboard 连接 Git 仓库，推荐设置：
@@ -178,11 +196,12 @@ Root directory: /
 
 使用流程：
 
-1. 粘贴播客网页或 RSS 地址并解析。
-2. 播放音频。
-3. 点击 `自动查找` 获取公开 transcript；没有的话点击 `生成 transcript`。
-4. 点击 `DeepSeek 分析`。
-5. 下载 Markdown。
+1. 输入访问密码。
+2. 粘贴播客网页或 RSS 地址并解析。
+3. 播放音频。
+4. 点击 `自动查找` 获取公开 transcript；没有的话点击 `生成 transcript`。
+5. 点击 `DeepSeek 分析`。
+6. 下载 Markdown。
 
 线上版不需要在页面里填写 API Key；Cloudflare Function 会读取 `DEEPSEEK_API_KEY` 和 `OPENAI_API_KEY`。
 

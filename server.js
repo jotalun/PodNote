@@ -1,6 +1,15 @@
 import { createServer } from "node:http";
 import { readFile, writeFile, mkdir } from "node:fs/promises";
 import { extname, join, resolve } from "node:path";
+import {
+  clearAuthCookie,
+  createAuthCookie,
+  getAuthPassword,
+  isAuthorized,
+  renderLoginPage,
+  shouldReturnJson,
+  unauthorizedJson
+} from "./lib/auth.js";
 import { findTranscript } from "./lib/transcript.js";
 import { transcribeAudio } from "./lib/transcribe.js";
 
@@ -21,6 +30,16 @@ const mimeTypes = {
 createServer(async (request, response) => {
   try {
     const url = new URL(request.url || "/", `http://${request.headers.host}`);
+    const password = getAuthPassword(process.env);
+
+    if (await handleAuth(request, response, url, password)) {
+      return;
+    }
+
+    if (!(await isAuthorized(request.headers.cookie, password))) {
+      handleUnauthorized(response, url);
+      return;
+    }
 
     if (request.method === "POST" && url.pathname === "/api/analyze") {
       await handleAnalyze(request, response);
@@ -60,6 +79,58 @@ createServer(async (request, response) => {
 }).listen(port, host, () => {
   console.log(`PodNote running at http://${host}:${port}`);
 });
+
+async function handleAuth(request, response, url, password) {
+  if (request.method === "POST" && url.pathname === "/api/auth/login") {
+    const body = await readRequestText(request);
+    const params = new URLSearchParams(body);
+    const nextUrl = safeNext(params.get("next"));
+
+    if (String(params.get("password") || "") === password) {
+      response.writeHead(303, {
+        Location: nextUrl,
+        "Set-Cookie": await createAuthCookie(password, url.href),
+        "Cache-Control": "no-store"
+      });
+      response.end();
+      return true;
+    }
+
+    response.writeHead(303, { Location: "/?auth=failed", "Cache-Control": "no-store" });
+    response.end();
+    return true;
+  }
+
+  if (url.pathname === "/api/auth/logout") {
+    response.writeHead(303, {
+      Location: "/",
+      "Set-Cookie": clearAuthCookie(url.href),
+      "Cache-Control": "no-store"
+    });
+    response.end();
+    return true;
+  }
+
+  return false;
+}
+
+function handleUnauthorized(response, url) {
+  if (shouldReturnJson(url.pathname)) {
+    response.writeHead(401, { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" });
+    response.end(unauthorizedJson());
+    return;
+  }
+
+  response.writeHead(200, { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store" });
+  response.end(renderLoginPage({ error: url.searchParams.get("auth") === "failed", next: `${url.pathname}${url.search}` }));
+}
+
+function safeNext(value) {
+  const next = String(value || "/");
+  if (!next.startsWith("/") || next.startsWith("//") || next.includes("://")) return "/";
+  if (next.startsWith("/api/auth/")) return "/";
+  return next;
+}
 
 async function handleAnalyze(request, response) {
   const body = await readJson(request);
@@ -312,11 +383,16 @@ async function serveStatic(pathname, response) {
 }
 
 async function readJson(request) {
+  const raw = await readRequestText(request);
+  return raw ? JSON.parse(raw) : {};
+}
+
+async function readRequestText(request) {
   let raw = "";
   for await (const chunk of request) {
     raw += chunk;
   }
-  return raw ? JSON.parse(raw) : {};
+  return raw;
 }
 
 function sendJson(response, status, payload) {

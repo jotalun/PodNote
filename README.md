@@ -2,7 +2,7 @@
 
 一个 transcript-first 的播客知识工作台：粘贴播客网页或 RSS，播放单集，粘贴 transcript，再用 DeepSeek 整理成 Markdown 笔记。
 
-当前版本：`0.8.1`
+当前版本：`0.9.0`
 
 ## 文档入口
 
@@ -31,15 +31,16 @@ http://127.0.0.1:4174/?rss=http%3A%2F%2F127.0.0.1%3A4174%2Ffixtures%2Fsample-fee
 
 ## 使用流程
 
-1. 在页面顶部粘贴播客网页或 RSS 链接并解析。
-2. 选择一集播放。
-3. 点击 `自动查找` 获取公开 transcript；没有的话点击 `生成 transcript`。
-4. 点击 `DeepSeek 分析`。
-5. 下载 `.md` 文件。
+1. 输入访问密码进入页面，默认密码是 `123456`。
+2. 在页面顶部粘贴播客网页或 RSS 链接并解析。
+3. 选择一集播放。
+4. 点击 `自动查找` 获取公开 transcript；没有的话点击 `生成 transcript`。
+5. 点击 `DeepSeek 分析`。
+6. 下载 `.md` 文件。
 
 ## 当前架构
 
-- `server.js`：本地静态服务、DeepSeek 代理、播客网页/RSS 抓取、transcript 查找和 OpenAI 转写。
+- `server.js`：本地静态服务、密码保护、DeepSeek 代理、播客网页/RSS 抓取、transcript 查找和 OpenAI 转写。
 - `index.html`：产品界面。
 - `app.js`：RSS 导入、播放器、transcript、笔记生成和导出交互。
 - `styles.css`：界面样式。
@@ -48,7 +49,7 @@ http://127.0.0.1:4174/?rss=http%3A%2F%2F127.0.0.1%3A4174%2Ffixtures%2Fsample-fee
 
 - 部署到 Cloudflare Pages 并设置 `DEEPSEEK_API_KEY` secret。
 - 给长音频增加切片转写，突破 OpenAI 单次 25MB 上传限制。
-- 增加访问保护，避免公开网站消耗 DeepSeek 额度。
+- 后续把默认密码改成更强的环境变量密码，避免公开网站消耗 API 额度。
 - 用 Electron 或 Tauri 打包成真正桌面 App。
 
 ## 文档维护约定
