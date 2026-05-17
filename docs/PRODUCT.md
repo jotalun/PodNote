@@ -1,6 +1,6 @@
 # PodNote Desktop 产品说明
 
-版本：`0.8.0`  
+版本：`0.8.1`  
 更新日期：2026-05-18
 
 ## 产品定位
@@ -86,7 +86,7 @@ https://podcast.latepost.com/164
 当前实现：
 
 - 使用 OpenAI `gpt-4o-mini-transcribe`。
-- 调用前会弹窗确认，显示按时长估算的费用。
+- 调用前需要两步确认，第一次点击会显示按时长估算的费用，第二次点击才会真正开始转写。
 - 结果会自动填入 transcript 输入区，并刷新字幕预览和 Markdown 草稿。
 - OpenAI API Key 只放在后端环境变量 `OPENAI_API_KEY`，不在页面暴露。
 

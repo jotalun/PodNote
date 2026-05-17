@@ -66,6 +66,8 @@ let isPlaying = true;
 let bilingual = false;
 let currentSpeed = 1.25;
 let savedSettings = {};
+let pendingTranscribeConfirmation = false;
+let pendingTranscribeTimer = 0;
 
 const episodeList = document.querySelector("#episodeList");
 const transcriptEl = document.querySelector("#transcript");
@@ -523,8 +525,17 @@ async function generateTranscriptForActiveEpisode() {
 
   const estimate = estimateTranscriptionCost(activeEpisode.duration);
   const costText = estimate ? `预计费用约 $${estimate}。` : "会产生 OpenAI 转写费用。";
-  const confirmed = window.confirm(`将调用 OpenAI 生成 transcript，${costText}\n\n当前版本只支持 25MB 以下音频。是否继续？`);
-  if (!confirmed) return;
+  if (!pendingTranscribeConfirmation) {
+    pendingTranscribeConfirmation = true;
+    generateTranscriptButton.textContent = estimate ? `确认生成 $${estimate}` : "确认生成";
+    updateTranscriptStatus(`将调用 OpenAI 生成 transcript，${costText} 当前版本只支持 25MB 以下音频。再次点击确认。`);
+    showToast("再次点击确认生成 transcript");
+    window.clearTimeout(pendingTranscribeTimer);
+    pendingTranscribeTimer = window.setTimeout(resetTranscribeConfirmation, 9000);
+    return;
+  }
+
+  resetTranscribeConfirmation();
 
   generateTranscriptButton.disabled = true;
   generateTranscriptButton.textContent = "生成中";
@@ -558,6 +569,14 @@ async function generateTranscriptForActiveEpisode() {
     showToast(message);
   } finally {
     generateTranscriptButton.disabled = false;
+    generateTranscriptButton.textContent = "生成 transcript";
+  }
+}
+
+function resetTranscribeConfirmation() {
+  pendingTranscribeConfirmation = false;
+  window.clearTimeout(pendingTranscribeTimer);
+  if (!generateTranscriptButton.disabled) {
     generateTranscriptButton.textContent = "生成 transcript";
   }
 }
