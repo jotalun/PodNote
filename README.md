@@ -1,8 +1,8 @@
 # PodNote Desktop
 
-一个 transcript-first 的播客知识工作台原型：先拿到完整转写，再用 DeepSeek 整理成适合 Obsidian 的 Markdown 笔记。
+一个 transcript-first 的播客知识工作台：粘贴 RSS，播放单集，粘贴 transcript，再用 DeepSeek 整理成 Markdown 笔记。
 
-当前版本：`0.5.2`
+当前版本：`0.6.0`
 
 ## 文档入口
 
@@ -29,17 +29,17 @@ http://127.0.0.1:4174
 http://127.0.0.1:4174/?rss=http%3A%2F%2F127.0.0.1%3A4174%2Ffixtures%2Fsample-feed.xml
 ```
 
-## 必要设置
+## 使用流程
 
-- RSS 地址：单个播客节目的订阅源。
-- OPML：一批播客订阅源的导入清单。
-- Transcript 来源：先支持手动粘贴，后面可接本地 Whisper 或第三方转写 API。
-- DeepSeek API Key：可在页面输入，也可用环境变量 `DEEPSEEK_API_KEY`。
-- Obsidian Vault：填写你的 vault 文件夹路径，导出时会写入 `PodNote/节目名.md`。
+1. 在页面顶部粘贴 RSS 地址并导入。
+2. 选择一集播放。
+3. 在右侧粘贴 transcript。
+4. 点击 `DeepSeek 分析`。
+5. 下载 `.md` 文件。
 
 ## 当前架构
 
-- `server.js`：本地静态服务、DeepSeek 代理、Obsidian Markdown 写入。
+- `server.js`：本地静态服务、DeepSeek 代理、RSS 抓取。
 - `index.html`：产品界面。
 - `app.js`：RSS 导入、播放器、transcript、笔记生成和导出交互。
 - `styles.css`：界面样式。
@@ -48,7 +48,7 @@ http://127.0.0.1:4174/?rss=http%3A%2F%2F127.0.0.1%3A4174%2Ffixtures%2Fsample-fee
 
 - 部署到 Cloudflare Pages 并设置 `DEEPSEEK_API_KEY` secret。
 - 接音频转写，生成带时间戳的 transcript。
-- 把 DeepSeek API Key 存入系统钥匙串或桌面应用安全存储。
+- 增加访问保护，避免公开网站消耗 DeepSeek 额度。
 - 用 Electron 或 Tauri 打包成真正桌面 App。
 
 ## 文档维护约定

@@ -77,7 +77,6 @@ const analysisStatus = document.querySelector("#analysisStatus");
 const deepseekButton = document.querySelector("#deepseekButton");
 const audioPlayer = document.querySelector("#audioPlayer");
 const audioStatus = document.querySelector("#audioStatus");
-const isLocalRuntime = ["localhost", "127.0.0.1"].includes(window.location.hostname);
 
 function renderEpisodes(items = episodes) {
   episodeList.replaceChildren(...items.map(createEpisodeCard));
@@ -446,43 +445,9 @@ async function analyzeWithDeepSeek() {
 }
 
 async function exportToObsidian() {
-  const vaultPath = document.querySelector("#vaultInput").value.trim();
-  const markdown = noteOutput.value;
-
-  if (!isLocalRuntime) {
-    downloadMarkdown();
-    updatePipeline("exported");
-    showToast("线上版已下载 Markdown，本机 Vault 需用本地版写入");
-    return;
-  }
-
-  if (!vaultPath) {
-    downloadMarkdown();
-    showToast("未设置 Vault，已改为下载 .md");
-    return;
-  }
-
-  try {
-    const response = await fetch("/api/export", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        vaultPath,
-        markdown,
-        fileName: `${activeEpisode.title}.md`
-      })
-    });
-
-    const data = await response.json();
-    if (!response.ok) throw new Error(data.error || "导出失败");
-
-    updatePipeline("exported");
-    showToast("已写入 Obsidian Vault");
-  } catch (error) {
-    console.error(error);
-    downloadMarkdown();
-    showToast("写入失败，已改为下载 .md");
-  }
+  downloadMarkdown();
+  updatePipeline("exported");
+  showToast("已生成 Markdown 文件");
 }
 
 function downloadMarkdown() {

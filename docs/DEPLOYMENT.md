@@ -1,6 +1,6 @@
 # Cloudflare 部署说明
 
-版本：`0.5.2`  
+版本：`0.6.0`  
 更新日期：2026-05-18
 
 ## 线上版能做什么
@@ -12,11 +12,7 @@ Cloudflare 线上版支持：
 - 通过 `/api/analyze` 调用 DeepSeek。
 - 生成和下载 Markdown。
 
-Cloudflare 线上版不支持：
-
-- 直接写入你电脑里的 Obsidian Vault。
-
-原因是 Cloudflare 运行在远程服务器上，不能访问你本机文件夹。需要写入本机 Vault 时，用本地版 `npm start`。
+Cloudflare 线上版不支持直接写入你电脑里的 Obsidian Vault。当前主流程统一为下载 Markdown。
 
 ## 部署前准备
 
@@ -182,5 +178,5 @@ Root directory: /
 | DeepSeek 分析 | 支持 | 支持 |
 | 播放音频 | 支持 | 支持 |
 | 下载 Markdown | 支持 | 支持 |
-| 写入本机 Obsidian Vault | 支持 | 不支持 |
+| 写入本机 Obsidian Vault | 暂不作为主流程 | 不支持 |
 | API Key 存放 | 本机环境变量或页面输入 | Cloudflare Secret |

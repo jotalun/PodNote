@@ -3,218 +3,165 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>PodNote Desktop</title>
+    <title>PodNote</title>
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
-    <div class="app-shell">
-      <aside class="sidebar" aria-label="播客库">
-        <div class="brand">
+    <div class="page-shell">
+      <header class="hero-panel">
+        <nav class="brand">
           <div class="brand-mark">PN</div>
           <div>
-            <p class="eyebrow">Podcast workspace</p>
-            <h1>PodNote</h1>
+            <p class="eyebrow">PodNote</p>
+            <strong>Podcast to Markdown</strong>
           </div>
-        </div>
-
-        <label class="search">
-          <span>搜索播客、单集、知识点</span>
-          <input id="searchInput" type="search" placeholder="输入关键词" />
-        </label>
-
-        <nav class="library-tabs" aria-label="分类">
-          <button class="active" type="button">今日</button>
-          <button type="button">订阅</button>
-          <button type="button">稍后听</button>
         </nav>
 
-        <section class="settings-card" aria-label="处理设置">
-          <div class="settings-title">
-            <p class="eyebrow">Setup</p>
-            <h2>处理设置</h2>
-          </div>
-          <label>
-            RSS 地址
-            <input id="rssInput" type="url" placeholder="https://example.com/feed.xml" />
-          </label>
-          <label>
-            OPML 订阅清单
-            <input id="opmlInput" type="file" accept=".opml,.xml" />
-          </label>
-          <label>
-            Transcript 来源
-            <select id="transcriptSourceSelect">
-              <option value="manual">手动粘贴</option>
-              <option value="local-whisper">本地 Whisper</option>
-              <option value="cloud-stt">转写 API</option>
-            </select>
-          </label>
-          <label>
-            目标语言
-            <select id="languageSelect">
-              <option value="zh-CN">简体中文</option>
-              <option value="zh-TW">繁体中文</option>
-              <option value="en">英文</option>
-            </select>
-          </label>
-          <label>
-            DeepSeek API Key
-            <input id="apiKeyInput" type="password" placeholder="sk-..." autocomplete="off" />
-          </label>
-          <label>
-            模型
-            <select id="modelSelect">
-              <option value="deepseek-v4-flash">deepseek-v4-flash</option>
-              <option value="deepseek-v4-pro">deepseek-v4-pro</option>
-            </select>
-          </label>
-          <label>
-            Obsidian Vault
-            <input id="vaultInput" placeholder="/Users/你/Obsidian/Vault" />
-          </label>
-          <button class="secondary-button" id="saveSettingsButton" type="button">保存设置</button>
-        </section>
+        <div class="hero-copy">
+          <h1>把播客变成 Markdown 笔记</h1>
+          <p>粘贴播客 RSS 链接，选一集播放；再粘贴 transcript，用 DeepSeek 整理成可下载的 Markdown。</p>
+        </div>
 
-        <section class="feed" id="episodeList" aria-label="单集列表"></section>
-      </aside>
-
-      <main class="player-panel">
-        <header class="topbar">
+        <section class="rss-card" aria-label="导入播客">
           <div>
-            <p class="eyebrow">正在收听</p>
-            <h2 id="episodeTitle">科技早知道：AI 原生应用为什么会改变知识工作</h2>
+            <p class="step-label">第一步</p>
+            <h2>粘贴播客 RSS 链接</h2>
           </div>
-          <div class="top-actions">
-            <button class="icon-button" id="importButton" type="button" title="导入 RSS">RSS</button>
-            <button class="secondary-button" id="deepseekButton" type="button">DeepSeek 分析</button>
-            <button class="primary-button" id="exportButton" type="button">导出到 Obsidian</button>
+          <div class="rss-row">
+            <input id="rssInput" type="url" placeholder="https://example.com/feed.xml" aria-label="播客 RSS 链接" />
+            <button class="primary-button" id="importButton" type="button">导入播客</button>
           </div>
-        </header>
+          <p class="hint">不知道 RSS 地址时，可以先试：<code>https://feeds.simplecast.com/54nAGcIl</code></p>
+        </section>
+      </header>
 
-        <section class="now-playing">
-          <div class="cover-art" id="coverArt" aria-hidden="true">
-            <div class="record"></div>
-            <div class="sound-lines">
-              <span></span><span></span><span></span><span></span><span></span>
+      <main class="workspace">
+        <section class="episode-panel" aria-label="单集列表">
+          <div class="panel-header compact">
+            <div>
+              <p class="step-label">选择单集</p>
+              <h2>播客列表</h2>
             </div>
           </div>
+          <label class="search">
+            <span>搜索</span>
+            <input id="searchInput" type="search" placeholder="搜索标题或节目" />
+          </label>
+          <section class="feed" id="episodeList" aria-label="单集列表"></section>
+        </section>
 
-          <div class="episode-meta">
-            <p id="showName">声动活泼</p>
-            <h3 id="episodeHeading">AI 原生应用为什么会改变知识工作</h3>
-            <p id="episodeDesc">
-              从桌面端收听、字幕跟读、结构化摘要到 Obsidian 笔记，本集适合整理成长期可复用的知识卡片。
-            </p>
-
-            <div class="progress-wrap">
-              <div class="time-row">
-                <span id="currentTime">12:48</span>
-                <span id="duration">48:12</span>
+        <section class="listen-panel" aria-label="播放器和字幕">
+          <div class="now-playing">
+            <div class="cover-art" id="coverArt" aria-hidden="true">
+              <div class="record"></div>
+              <div class="sound-lines">
+                <span></span><span></span><span></span><span></span><span></span>
               </div>
-              <input id="progress" type="range" min="0" max="100" value="27" aria-label="播放进度" />
-              <audio id="audioPlayer" preload="metadata"></audio>
-              <p class="audio-status" id="audioStatus">示例单集，尚未连接真实音频</p>
             </div>
 
-            <div class="controls" aria-label="播放器控制">
-              <button class="icon-button" id="backButton" type="button" title="后退 15 秒">-15</button>
-              <button class="play-button" id="playButton" type="button">暂停</button>
-              <button class="icon-button" id="forwardButton" type="button" title="前进 30 秒">+30</button>
-              <button class="speed-button" id="speedButton" type="button">1.25x</button>
+            <div class="episode-meta">
+              <p id="showName">声动活泼</p>
+              <h2 id="episodeHeading">AI 原生应用为什么会改变知识工作</h2>
+              <p id="episodeDesc">导入 RSS 后，这里会显示当前单集简介。</p>
+
+              <div class="progress-wrap">
+                <div class="time-row">
+                  <span id="currentTime">00:00</span>
+                  <span id="duration">48:12</span>
+                </div>
+                <input id="progress" type="range" min="0" max="100" value="0" aria-label="播放进度" />
+                <audio id="audioPlayer" preload="metadata"></audio>
+                <p class="audio-status" id="audioStatus">粘贴 RSS 链接后开始播放</p>
+              </div>
+
+              <div class="controls" aria-label="播放器控制">
+                <button class="icon-button" id="backButton" type="button" title="后退 15 秒">-15</button>
+                <button class="play-button" id="playButton" type="button">播放</button>
+                <button class="icon-button" id="forwardButton" type="button" title="前进 30 秒">+30</button>
+                <button class="speed-button" id="speedButton" type="button">1.25x</button>
+              </div>
             </div>
           </div>
-        </section>
 
-        <section class="pipeline" aria-label="处理流程">
-          <article class="pipeline-step done" id="stepSource">
-            <span>1</span>
-            <div>
-              <strong>导入音频源</strong>
-              <p>RSS / OPML / 单集链接</p>
-            </div>
-          </article>
-          <article class="pipeline-step done" id="stepTranscript">
-            <span>2</span>
-            <div>
-              <strong>拿到 transcript</strong>
-              <p>转写或粘贴原文</p>
-            </div>
-          </article>
-          <article class="pipeline-step" id="stepAnalyze">
-            <span>3</span>
-            <div>
-              <strong>分析重点</strong>
-              <p id="analysisStatus">等待 DeepSeek</p>
-            </div>
-          </article>
-          <article class="pipeline-step" id="stepExport">
-            <span>4</span>
-            <div>
-              <strong>写入知识库</strong>
-              <p>生成 Markdown</p>
-            </div>
-          </article>
-        </section>
-
-        <section class="workspace-grid">
-          <div class="panel transcript-panel">
-            <div class="panel-header">
+          <section class="transcript-card">
+            <div class="panel-header compact">
               <div>
-                <p class="eyebrow">Transcript first</p>
-                <h3>完整转写与时间线</h3>
+                <p class="step-label">参考时间线</p>
+                <h2>字幕预览</h2>
               </div>
               <button class="text-button" id="translateButton" type="button">中英对照</button>
             </div>
             <div class="transcript" id="transcript"></div>
-          </div>
-
-          <div class="panel chapters-panel">
-            <div class="panel-header">
-              <div>
-                <p class="eyebrow">章节</p>
-                <h3>本集结构</h3>
-              </div>
-            </div>
-            <div class="chapters" id="chapters"></div>
-          </div>
+          </section>
         </section>
-      </main>
 
-      <aside class="notes-panel" aria-label="知识库笔记">
-        <div class="panel-header">
-          <div>
-            <p class="eyebrow">Obsidian vault</p>
-            <h2>播客笔记</h2>
+        <aside class="notes-panel" aria-label="生成笔记">
+          <div class="panel-header compact">
+            <div>
+              <p class="step-label">第二步</p>
+              <h2>粘贴 transcript</h2>
+            </div>
           </div>
-          <button class="text-button" id="regenerateButton" type="button">重新整理</button>
-        </div>
 
-        <div class="note-controls">
-          <label>
-            Transcript 原文
-            <textarea id="rawTranscript" class="raw-transcript" spellcheck="false" aria-label="Transcript 原文"></textarea>
-          </label>
-          <label>
-            笔记模板
-            <select id="templateSelect">
-              <option value="knowledge">知识卡片</option>
-              <option value="meeting">会议纪要</option>
-              <option value="zettel">Zettelkasten</option>
-            </select>
-          </label>
-          <label>
-            标签
-            <input id="tagInput" value="#podcast #AI #知识管理" />
-          </label>
-        </div>
+          <textarea
+            id="rawTranscript"
+            class="raw-transcript"
+            spellcheck="false"
+            aria-label="Transcript 原文"
+            placeholder="[00:00] 主持人：把这一集的 transcript 粘贴在这里。"
+          ></textarea>
 
-        <textarea id="noteOutput" class="note-output" spellcheck="false" aria-label="Markdown 笔记"></textarea>
+          <div class="action-row">
+            <button class="primary-button" id="deepseekButton" type="button">DeepSeek 分析</button>
+            <button class="secondary-button" id="regenerateButton" type="button">本地整理</button>
+          </div>
 
-        <div class="note-actions">
-          <button class="secondary-button" id="copyButton" type="button">复制 Markdown</button>
-          <button class="primary-button" id="downloadButton" type="button">下载 .md</button>
-        </div>
-      </aside>
+          <div class="status-pills" aria-label="处理状态">
+            <div class="status-pill done" id="stepSource">1 导入</div>
+            <div class="status-pill done" id="stepTranscript">2 Transcript</div>
+            <div class="status-pill" id="stepAnalyze"><span id="analysisStatus">等待分析</span></div>
+            <div class="status-pill" id="stepExport">3 下载</div>
+          </div>
+
+          <div class="panel-header compact note-heading">
+            <div>
+              <p class="step-label">第三步</p>
+              <h2>下载 Markdown</h2>
+            </div>
+          </div>
+
+          <textarea id="noteOutput" class="note-output" spellcheck="false" aria-label="Markdown 笔记"></textarea>
+
+          <div class="note-actions">
+            <button class="secondary-button" id="copyButton" type="button">复制</button>
+            <button class="primary-button" id="downloadButton" type="button">下载 .md</button>
+          </div>
+        </aside>
+      </main>
+    </div>
+
+    <div class="hidden-settings" aria-hidden="true">
+      <h2 id="episodeTitle">声动活泼：AI 原生应用为什么会改变知识工作</h2>
+      <input id="apiKeyInput" type="hidden" />
+      <input id="vaultInput" type="hidden" />
+      <input id="tagInput" type="hidden" value="#podcast #AI #知识管理" />
+      <input id="opmlInput" type="file" accept=".opml,.xml" />
+      <select id="transcriptSourceSelect">
+        <option value="manual">手动粘贴</option>
+      </select>
+      <select id="languageSelect">
+        <option value="zh-CN">简体中文</option>
+      </select>
+      <select id="modelSelect">
+        <option value="deepseek-v4-flash">deepseek-v4-flash</option>
+        <option value="deepseek-v4-pro">deepseek-v4-pro</option>
+      </select>
+      <select id="templateSelect">
+        <option value="knowledge">知识卡片</option>
+      </select>
+      <button id="saveSettingsButton" type="button"></button>
+      <button id="exportButton" type="button"></button>
+      <div id="chapters"></div>
     </div>
 
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
