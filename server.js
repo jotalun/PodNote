@@ -2,6 +2,7 @@ import { createServer } from "node:http";
 import { readFile, writeFile, mkdir } from "node:fs/promises";
 import { extname, join, resolve } from "node:path";
 import { findTranscript } from "./lib/transcript.js";
+import { transcribeAudio } from "./lib/transcribe.js";
 
 const root = resolve(".");
 const port = Number(process.env.PORT || 4174);
@@ -38,6 +39,11 @@ createServer(async (request, response) => {
 
     if (request.method === "GET" && url.pathname === "/api/transcript") {
       await handleTranscript(url, response);
+      return;
+    }
+
+    if (request.method === "POST" && url.pathname === "/api/transcribe") {
+      await handleTranscribe(request, response);
       return;
     }
 
@@ -144,6 +150,32 @@ async function handleTranscript(url, response) {
   }
 }
 
+async function handleTranscribe(request, response) {
+  const body = await readJson(request);
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 120000);
+
+  try {
+    const result = await transcribeAudio(body, {
+      apiKey: body.apiKey || process.env.OPENAI_API_KEY,
+      signal: controller.signal
+    });
+    sendJson(response, 200, result);
+  } catch (error) {
+    const status = Number(error.status || 502);
+    const message = error.name === "AbortError" ? "音频转写超时" : error.message || "音频转写失败";
+    sendJson(response, status, {
+      ok: false,
+      error: message,
+      setupRequired: Boolean(error.setupRequired),
+      contentLength: error.contentLength,
+      maxBytes: error.maxBytes
+    });
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 async function fetchFeedOrDiscover(inputUrl, signal) {
   const first = await fetchText(inputUrl, signal);
   if (looksLikeFeed(first.text)) {
@@ -173,7 +205,7 @@ async function fetchText(url, signal) {
   const upstream = await fetch(url, {
     headers: {
       Accept: "application/rss+xml, application/atom+xml, application/xml, text/xml, text/html, */*",
-      "User-Agent": "PodNote/0.7.0"
+      "User-Agent": "PodNote/0.8.0"
     },
     signal
   });

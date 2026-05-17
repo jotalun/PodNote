@@ -76,6 +76,7 @@ const toast = document.querySelector("#toast");
 const analysisStatus = document.querySelector("#analysisStatus");
 const deepseekButton = document.querySelector("#deepseekButton");
 const fetchTranscriptButton = document.querySelector("#fetchTranscriptButton");
+const generateTranscriptButton = document.querySelector("#generateTranscriptButton");
 const transcriptStatus = document.querySelector("#transcriptStatus");
 const audioPlayer = document.querySelector("#audioPlayer");
 const audioStatus = document.querySelector("#audioStatus");
@@ -169,7 +170,9 @@ function updateTranscriptStatus(message = "") {
     return;
   }
 
-  transcriptStatus.textContent = activeEpisode.transcriptStatus || "这期还没有 transcript。可以自动查找公开文字稿，或手动粘贴。";
+  const estimate = estimateTranscriptionCost(activeEpisode.duration);
+  const costText = estimate ? ` 生成 transcript 预计约 $${estimate}。` : "";
+  transcriptStatus.textContent = activeEpisode.transcriptStatus || `这期还没有 transcript。可以先自动查找公开文字稿；没有的话再生成。${costText}`;
 }
 
 function setCoverBackground(element, episode) {
@@ -333,6 +336,12 @@ function secondsToTimestamp(totalSeconds) {
   const secs = total % 60;
   if (hours) return `${hours}:${String(mins).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
   return `${String(mins).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
+}
+
+function estimateTranscriptionCost(duration) {
+  const seconds = parseTimeToSeconds(duration);
+  if (!seconds) return "";
+  return ((seconds / 60) * 0.003).toFixed(2);
 }
 
 function showToast(message) {
@@ -506,6 +515,53 @@ async function fetchTranscriptForActiveEpisode() {
   }
 }
 
+async function generateTranscriptForActiveEpisode() {
+  if (!activeEpisode.audioUrl) {
+    showToast("这集没有可转写的音频地址");
+    return;
+  }
+
+  const estimate = estimateTranscriptionCost(activeEpisode.duration);
+  const costText = estimate ? `预计费用约 $${estimate}。` : "会产生 OpenAI 转写费用。";
+  const confirmed = window.confirm(`将调用 OpenAI 生成 transcript，${costText}\n\n当前版本只支持 25MB 以下音频。是否继续？`);
+  if (!confirmed) return;
+
+  generateTranscriptButton.disabled = true;
+  generateTranscriptButton.textContent = "生成中";
+  updateTranscriptStatus("正在下载音频并调用 OpenAI 转写，可能需要几十秒...");
+
+  try {
+    const response = await fetch("/api/transcribe", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        audioUrl: activeEpisode.audioUrl,
+        title: activeEpisode.title,
+        duration: activeEpisode.duration,
+        model: "gpt-4o-mini-transcribe"
+      })
+    });
+
+    const data = await response.json();
+    if (!response.ok || !data.transcript) {
+      throw new Error(data.error || "音频转写失败");
+    }
+
+    applyTranscript(data.transcript, data);
+    showToast("已生成 transcript");
+  } catch (error) {
+    const message = error.message || "音频转写失败";
+    activeEpisode.transcriptStatus = message;
+    updateTranscriptStatus(message);
+    showToast(message);
+  } finally {
+    generateTranscriptButton.disabled = false;
+    generateTranscriptButton.textContent = "生成 transcript";
+  }
+}
+
 function appendParam(params, key, value) {
   if (value) params.set(key, value);
 }
@@ -527,7 +583,8 @@ function transcriptSourceLabel(sourceType = "") {
     "rss-transcript": " RSS 文字稿",
     "rss-inline-transcript": " RSS 内嵌文字稿",
     "episode-page": "单集网页",
-    "episode-page-link": "单集网页链接"
+    "episode-page-link": "单集网页链接",
+    "openai-transcribe": " OpenAI 转写"
   };
   return labels[sourceType] || "公开来源";
 }
@@ -852,6 +909,7 @@ document.querySelector("#saveSettingsButton").addEventListener("click", saveSett
 document.querySelector("#opmlInput").addEventListener("change", handleOpmlImport);
 deepseekButton.addEventListener("click", analyzeWithDeepSeek);
 fetchTranscriptButton.addEventListener("click", fetchTranscriptForActiveEpisode);
+generateTranscriptButton.addEventListener("click", generateTranscriptForActiveEpisode);
 
 document.querySelector("#copyButton").addEventListener("click", async () => {
   await navigator.clipboard.writeText(noteOutput.value);

@@ -454,7 +454,8 @@ input[type="range"] {
 
 .controls,
 .action-row,
-.note-actions {
+.note-actions,
+.transcript-actions {
   gap: 9px;
 }
 
@@ -568,6 +569,13 @@ input[type="range"] {
   display: flex;
   flex-direction: column;
   gap: 13px;
+}
+
+.transcript-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
 }
 
 .transcript-helper {
@@ -739,13 +747,15 @@ input[type="range"] {
 
   .controls,
   .action-row,
-  .note-actions {
+  .note-actions,
+  .transcript-actions {
     flex-wrap: wrap;
   }
 
   .controls button,
   .action-row button,
-  .note-actions button {
+  .note-actions button,
+  .transcript-actions button {
     flex: 1 1 42%;
   }
 

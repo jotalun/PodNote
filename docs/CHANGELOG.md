@@ -1,5 +1,19 @@
 # 更新记录
 
+## 0.8.0 - 2026-05-18
+
+### 新增
+
+- 新增 `/api/transcribe`，使用 OpenAI `gpt-4o-mini-transcribe` 从音频生成 transcript。
+- 新增 `生成 transcript` 按钮，调用前会弹出预计费用确认。
+- 新增 OpenAI Key 环境变量说明，Cloudflare 线上版读取 `OPENAI_API_KEY`。
+
+### 改进
+
+- transcript 状态会显示预计转写费用。
+- 当前版本会拦截超过 25MB 的音频，并提示需要切片或支持 URL 转写的服务，避免静默失败。
+- `.env.example` 增加 `OPENAI_API_KEY`。
+
 ## 0.7.0 - 2026-05-18
 
 ### 新增

@@ -100,9 +100,12 @@
                 <p class="eyebrow">Step 2</p>
                 <h2>获取 transcript</h2>
               </div>
-              <button class="text-button" id="fetchTranscriptButton" type="button">自动查找</button>
+              <div class="transcript-actions">
+                <button class="text-button" id="fetchTranscriptButton" type="button">自动查找</button>
+                <button class="secondary-button" id="generateTranscriptButton" type="button">生成 transcript</button>
+              </div>
             </div>
-            <p class="transcript-helper" id="transcriptStatus">先自动查找公开文字稿；没有的话再手动粘贴。</p>
+            <p class="transcript-helper" id="transcriptStatus">先自动查找公开文字稿；没有的话再生成 transcript。</p>
             <textarea
               id="rawTranscript"
               class="raw-transcript"
