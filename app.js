@@ -478,34 +478,34 @@ async function handleOpmlImport(event) {
 
 async function loadRssFeed(feedUrl = document.querySelector("#rssInput").value.trim()) {
   if (!feedUrl) {
-    showToast("请先填写 RSS 地址");
+    showToast("请先粘贴播客链接");
     return;
   }
 
   const importButton = document.querySelector("#importButton");
   importButton.disabled = true;
-  importButton.textContent = "导入中";
+  importButton.textContent = "解析中";
 
   try {
     const response = await fetch(`/api/rss?url=${encodeURIComponent(feedUrl)}`);
     const data = await response.json();
-    if (!response.ok) throw new Error(data.error || "RSS 导入失败");
+    if (!response.ok) throw new Error(data.error || "链接解析失败");
 
     const parsed = parsePodcastFeed(data.xml, data.url || feedUrl);
     if (!parsed.episodes.length) throw new Error("没有在 RSS 中找到可播放单集");
 
     episodes = parsed.episodes;
-    activeEpisode = episodes[0];
-    document.querySelector("#rssInput").value = data.url || feedUrl;
+    activeEpisode = findEpisodeFromSource(episodes, feedUrl, data.sourceUrl) || episodes[0];
+    document.querySelector("#rssInput").value = feedUrl;
     renderEpisode();
     document.querySelector("#stepSource").classList.add("done");
-    showToast(`已导入 ${parsed.episodes.length} 集：${parsed.showTitle}`);
+    showToast(`${data.discovered ? "已从网页找到 RSS，" : ""}已导入 ${parsed.episodes.length} 集：${parsed.showTitle}`);
   } catch (error) {
     console.error(error);
-    showToast(error.message || "RSS 导入失败");
+    showToast(error.message || "链接解析失败");
   } finally {
     importButton.disabled = false;
-    importButton.textContent = "RSS";
+    importButton.textContent = "解析链接";
   }
 }
 
@@ -529,9 +529,10 @@ function parsePodcastFeed(xml, sourceUrl) {
       const duration = normalizeDuration(readFirstText(item, ["itunes:duration", "duration"]));
       const image = readImage(item) || showImage;
       const pubDate = readFirstText(item, ["pubDate", "published", "updated"]);
+      const webUrl = readEpisodePageUrl(item);
 
       return {
-        id: `rss-${hashString(`${sourceUrl}-${title}-${index}`)}`,
+        id: `rss-${hashString(`${sourceUrl}-${webUrl || title}-${index}`)}`,
         show: showTitle,
         title,
         desc,
@@ -541,6 +542,7 @@ function parsePodcastFeed(xml, sourceUrl) {
         image,
         audioUrl,
         pubDate,
+        webUrl,
         sourceUrl,
         hasTranscript: false,
         rawTranscript: "",
@@ -551,6 +553,23 @@ function parsePodcastFeed(xml, sourceUrl) {
     .filter((episode) => episode.audioUrl);
 
   return { showTitle, episodes: parsedEpisodes };
+}
+
+function findEpisodeFromSource(items, inputUrl, sourceUrl = "") {
+  const targets = [inputUrl, sourceUrl].map(normalizeUrlForCompare).filter(Boolean);
+  if (!targets.length) return null;
+  return items.find((episode) => targets.includes(normalizeUrlForCompare(episode.webUrl))) || null;
+}
+
+function normalizeUrlForCompare(value) {
+  if (!value) return "";
+  try {
+    const url = new URL(value);
+    url.hash = "";
+    return url.href.replace(/\/$/, "");
+  } catch {
+    return String(value).trim().replace(/\/$/, "");
+  }
 }
 
 function readFirstText(node, tagNames) {
@@ -585,6 +604,23 @@ function readAudioUrl(item) {
   });
 
   return audioLink?.getAttribute("href") || audioLink?.textContent?.trim() || "";
+}
+
+function readEpisodePageUrl(item) {
+  const links = [...item.getElementsByTagName("link")];
+  const alternate = links.find((link) => {
+    const href = link.getAttribute("href") || "";
+    const rel = link.getAttribute("rel") || "";
+    const type = link.getAttribute("type") || "";
+    return href && (!rel || rel === "alternate") && (!type || type.includes("html"));
+  });
+  if (alternate?.getAttribute("href")) return alternate.getAttribute("href");
+
+  const textLink = links.map((link) => link.textContent?.trim() || "").find((href) => /^https?:\/\//.test(href));
+  if (textLink) return textLink;
+
+  const guid = readFirstText(item, ["guid", "id"]);
+  return /^https?:\/\//.test(guid) ? guid : "";
 }
 
 function stripHtml(value) {
@@ -700,6 +736,11 @@ document.querySelector("#downloadButton").addEventListener("click", () => {
 document.querySelector("#exportButton").addEventListener("click", exportToObsidian);
 
 document.querySelector("#importButton").addEventListener("click", () => loadRssFeed());
+document.querySelector("#rssInput").addEventListener("keydown", (event) => {
+  if (event.key !== "Enter") return;
+  event.preventDefault();
+  loadRssFeed();
+});
 
 document.querySelector("#backButton").addEventListener("click", () => {
   if (activeEpisode.audioUrl) {
