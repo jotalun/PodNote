@@ -71,9 +71,7 @@ let pendingTranscribeTimer = 0;
 const maxTranscribeBytes = 25 * 1024 * 1024;
 const openAiTranscribeCostPerMinuteUsd = 0.003;
 const deepgramTranscribeCostPerMinuteUsd = 0.0043;
-const dailyTranscribeLimitMinutes = 300;
 const transcriptCachePrefix = "podnote-transcript-cache-v4:";
-const transcribeUsageKey = "podnote-transcribe-usage";
 
 const episodeList = document.querySelector("#episodeList");
 const transcriptEl = document.querySelector("#transcript");
@@ -904,15 +902,6 @@ async function generateTranscriptForActiveEpisode() {
   }
 
   const provider = transcribeProviderForEpisode(activeEpisode);
-  const durationMinutes = Math.ceil(parseTimeToSeconds(activeEpisode.duration) / 60);
-  if (wouldExceedDailyTranscribeLimit(durationMinutes)) {
-    const used = getTodayTranscribeUsage().minutes;
-    const message = `今天已转写约 ${used} 分钟，默认上限 ${dailyTranscribeLimitMinutes} 分钟。为了控制成本，今天先暂停生成。`;
-    updateTranscriptStatus(message);
-    showToast("已达到今日转写保护额度");
-    return;
-  }
-
   const estimate = estimateTranscriptionCost(activeEpisode.duration, provider);
   const providerName = transcribeProviderName(provider);
   const costText = estimate ? `预计费用约 $${estimate}。` : "会产生转写费用。";
@@ -959,7 +948,6 @@ async function generateTranscriptForActiveEpisode() {
     }
 
     saveCachedTranscript(activeEpisode, data);
-    recordTranscribeUsage(durationMinutes, data.provider || provider);
     updateQuotaBadge(data.quota);
     applyTranscript(data.transcript, data);
     showToast("已生成 transcript");
@@ -1288,40 +1276,6 @@ function saveCachedTranscript(episode, data) {
 
 function transcriptCacheKey(episode) {
   return `${transcriptCachePrefix}${hashString(`${episode.audioUrl || ""}-${episode.title || ""}-${episode.duration || ""}`)}`;
-}
-
-function getTodayTranscribeUsage() {
-  const today = new Date().toISOString().slice(0, 10);
-  try {
-    const usage = JSON.parse(localStorage.getItem(transcribeUsageKey) || "{}");
-    if (usage.date === today) return { date: today, minutes: Number(usage.minutes || 0) };
-  } catch {
-    // Reset malformed usage data.
-  }
-
-  return { date: today, minutes: 0 };
-}
-
-function wouldExceedDailyTranscribeLimit(minutes) {
-  if (!minutes) return false;
-  const usage = getTodayTranscribeUsage();
-  return usage.minutes + minutes > dailyTranscribeLimitMinutes;
-}
-
-function recordTranscribeUsage(minutes, provider) {
-  if (!minutes) return;
-  const usage = getTodayTranscribeUsage();
-  const nextUsage = {
-    date: usage.date,
-    minutes: usage.minutes + minutes,
-    provider,
-    updatedAt: new Date().toISOString()
-  };
-  try {
-    localStorage.setItem(transcribeUsageKey, JSON.stringify(nextUsage));
-  } catch {
-    // Usage protection is best-effort in the browser.
-  }
 }
 
 function readChaptersFromDescription(desc) {

@@ -1,6 +1,6 @@
 # 后续路线图
 
-版本：`0.19.0`
+版本：`0.19.1`
 更新日期：2026-05-18
 
 ## 最近要做
@@ -40,7 +40,8 @@
 - 自动发现单集网页里的 transcript / 字幕链接。
 - 支持 25MB 以下音频用 OpenAI 生成 transcript。
 - 支持超过 25MB 的公开音频用 Deepgram URL 转写。
-- 浏览器端 transcript 缓存和每日 300 分钟转写保护。
+- 浏览器端 transcript 缓存。
+- Cloudflare KV 服务端转写额度保护。
 - Cloudflare KV 服务端 transcript 缓存和额度保护。
 - 播放时字幕自动同步高亮。
 - 播放器卡片内当前字幕显示。
