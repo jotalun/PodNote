@@ -2,7 +2,7 @@
 
 一个 transcript-first 的播客知识工作台：粘贴小宇宙、播客网页或 RSS，播放单集，获取 transcript，再用 DeepSeek 整理成 Markdown 笔记。
 
-当前版本：`0.18.0`
+当前版本：`0.19.0`
 
 ## 文档入口
 
@@ -53,6 +53,16 @@ http://127.0.0.1:4174/?rss=http%3A%2F%2F127.0.0.1%3A4174%2Ffixtures%2Fsample-fee
 - 绑定 Cloudflare KV 为 `PODNOTE_KV`，用于长期保存用户额度和 transcript 缓存。
 - 配置 `PODNOTE_INVITE_CODES` 和 `PODNOTE_SESSION_SECRET`，用邀请码控制内测用户。
 - 用 Electron 或 Tauri 打包成真正桌面 App。
+
+## 生成邀请码
+
+给陌生人内测时，建议一人一个独立邀请码，套餐用 `free`。
+
+```bash
+npm run invites -- 10 free xhs
+```
+
+命令会生成一段可以复制到 Cloudflare `PODNOTE_INVITE_CODES` 的值。
 
 ## 文档维护约定
 

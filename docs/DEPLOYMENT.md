@@ -1,6 +1,6 @@
 # Cloudflare 部署说明
 
-版本：`0.18.0`
+版本：`0.19.0`
 更新日期：2026-05-18
 
 ## 线上版能做什么
@@ -167,8 +167,16 @@ alice-001,bob-002,creator-003
 也可以给邀请码加显示名和套餐：
 
 ```text
-alice-001|Alice|free,bob-002|Bob|pro
+alice-001|Alice|free,bob-002|Bob|free,jotalun-owner-2026|Jotalun|owner
 ```
+
+陌生人内测时，建议一人一个独立邀请码，避免多人共用一份额度。可以在本地生成一批 `free` 邀请码：
+
+```bash
+npm run invites -- 10 free xhs
+```
+
+命令输出的第一段就是 `PODNOTE_INVITE_CODES` 可以填写的值。生成后复制到 Cloudflare 的环境变量里，再重新部署。
 
 再添加一个 session 签名密钥：
 
@@ -188,6 +196,15 @@ PODNOTE_MONTHLY_ANALYZE_COUNT=30
 PODNOTE_GLOBAL_DAILY_TRANSCRIBE_MINUTES=1000
 PODNOTE_GLOBAL_DAILY_COST_USD=20
 ```
+
+代码内置的套餐默认值是：
+
+| 套餐 | 本月转写 | 今日转写 | 单集上限 | 每月分析 |
+| --- | ---: | ---: | ---: | ---: |
+| `free` | 60 分钟 | 120 分钟 | 120 分钟 | 30 次 |
+| `owner` | 3000 分钟 | 600 分钟 | 240 分钟 | 1000 次 |
+
+如果 Cloudflare 环境变量里设置了 `PODNOTE_OWNER_MONTHLY_TRANSCRIBE_MINUTES` 这类变量，会覆盖代码默认值。
 
 设置后重新部署一次。
 
