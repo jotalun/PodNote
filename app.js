@@ -88,6 +88,7 @@ const deepseekButton = document.querySelector("#deepseekButton");
 const fetchTranscriptButton = document.querySelector("#fetchTranscriptButton");
 const generateTranscriptButton = document.querySelector("#generateTranscriptButton");
 const downloadTranscriptButton = document.querySelector("#downloadTranscriptButton");
+const downloadTranscriptMarkdownButton = document.querySelector("#downloadTranscriptMarkdownButton");
 const transcriptStatus = document.querySelector("#transcriptStatus");
 const audioPlayer = document.querySelector("#audioPlayer");
 const audioStatus = document.querySelector("#audioStatus");
@@ -1097,21 +1098,66 @@ function downloadMarkdown() {
   return true;
 }
 
-function downloadTranscript() {
+function downloadTranscript(format = "txt") {
   const transcriptText = rawTranscript.value.trim() || getEpisodeTranscriptText(activeEpisode);
   if (!transcriptText.trim()) {
     showToast("还没有 transcript 可下载");
-    return;
+    return false;
   }
 
-  const header = `# ${activeEpisode.title}\n\n节目：${activeEpisode.show}\n导出时间：${new Date().toLocaleString()}\n\n`;
-  const blob = new Blob([`${header}${transcriptText}\n`], { type: "text/plain;charset=utf-8" });
+  const fileBase = `${sanitizeDownloadName(activeEpisode.title)} transcript`;
+  const content = format === "md" ? buildTranscriptMarkdown(transcriptText) : buildTranscriptText(transcriptText);
+  const mimeType = format === "md" ? "text/markdown;charset=utf-8" : "text/plain;charset=utf-8";
+  const extension = format === "md" ? "md" : "txt";
+  const blob = new Blob([content], { type: mimeType });
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;
-  link.download = `${sanitizeDownloadName(activeEpisode.title)} transcript.txt`;
+  link.download = `${fileBase}.${extension}`;
   link.click();
   URL.revokeObjectURL(url);
+  return true;
+}
+
+function buildTranscriptText(transcriptText) {
+  return `# ${activeEpisode.title}\n\n节目：${activeEpisode.show}\n导出时间：${new Date().toLocaleString()}\n\n${transcriptText}\n`;
+}
+
+function buildTranscriptMarkdown(transcriptText) {
+  const generatedAt = new Date().toLocaleString("zh-CN");
+  const episodeUrl = activeEpisode.webUrl || activeEpisode.sourceUrl || "";
+  const audioUrl = activeEpisode.audioUrl || "";
+  const pubDate = activeEpisode.pubDate || "";
+  const transcriptSource = activeEpisode.transcriptSource || "manual";
+
+  return `---
+type: podcast-transcript
+show: "${frontmatterEscape(activeEpisode.show)}"
+episode: "${frontmatterEscape(activeEpisode.title)}"
+date: "${frontmatterEscape(pubDate)}"
+duration: "${frontmatterEscape(activeEpisode.duration || "未知时长")}"
+source: "${frontmatterEscape(episodeUrl)}"
+audio: "${frontmatterEscape(audioUrl)}"
+transcript_source: "${frontmatterEscape(transcriptSource)}"
+tags:
+  - podcast
+  - transcript
+  - podnote
+---
+
+# ${activeEpisode.title} Transcript
+
+> [!info] 节目信息
+> - 播客：[[${activeEpisode.show}]]
+> - 单集：${activeEpisode.title}
+> - 时长：${activeEpisode.duration || "未知时长"}
+> - 链接：${episodeUrl || "未记录"}
+> - 导出时间：${generatedAt}
+
+## Transcript
+
+${transcriptText}
+`;
 }
 
 function sanitizeDownloadName(value) {
@@ -1525,8 +1571,10 @@ deepseekButton.addEventListener("click", analyzeWithDeepSeek);
 fetchTranscriptButton.addEventListener("click", fetchTranscriptForActiveEpisode);
 generateTranscriptButton.addEventListener("click", generateTranscriptForActiveEpisode);
 downloadTranscriptButton.addEventListener("click", () => {
-  downloadTranscript();
-  showToast("已生成 transcript 文件");
+  if (downloadTranscript("txt")) showToast("已生成 transcript txt");
+});
+downloadTranscriptMarkdownButton.addEventListener("click", () => {
+  if (downloadTranscript("md")) showToast("已生成 transcript Markdown");
 });
 
 copyButton.addEventListener("click", async () => {

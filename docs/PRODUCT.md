@@ -1,7 +1,7 @@
 # PodNote Desktop 产品说明
 
-版本：`0.19.1`
-更新日期：2026-05-18
+版本：`0.19.2`
+更新日期：2026-05-19
 
 ## 产品定位
 
@@ -136,7 +136,7 @@ https://www.xiaoyuzhoufm.com/podcast/5e4ee557418a84a0466737b7
 - 转写额度由服务端 KV 统一检查，避免不同套餐被浏览器本地旧数据误拦截。
 - 结果会自动填入 transcript 输入区，并刷新播放器内字幕时间线。
 - Markdown 下载区不会自动生成草稿；需要等 transcript 准备好后点击 `DeepSeek 分析`。
-- 当前 transcript 可以直接下载为 `.txt` 文件。
+- 当前 transcript 可以直接下载为 `.txt` 或 Obsidian 友好的 `.md` 文件。
 - OpenAI API Key 和 Deepgram API Key 只放在后端环境变量，不在页面暴露。
 - 生成前后都会由服务端检查额度；同一集如果已经有服务端 transcript 缓存，会直接复用缓存，不重复扣转写费用。
 - 全站每日预算可以通过 `PODNOTE_GLOBAL_DAILY_COST_USD` 控制，超过预算后新的转写请求会被服务端拒绝。
