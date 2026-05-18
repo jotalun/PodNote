@@ -1,6 +1,6 @@
 # PodNote Desktop 产品说明
 
-版本：`0.12.0`  
+版本：`0.13.0`  
 更新日期：2026-05-18
 
 ## 产品定位
@@ -156,14 +156,23 @@ https://www.xiaoyuzhoufm.com/podcast/5e4ee557418a84a0466737b7
 deepseek-v4-flash
 ```
 
-DeepSeek 会生成适合 Obsidian 的 Markdown，包含：
+DeepSeek 默认使用 `Obsidian 知识库笔记` 模板，会生成适合长期保存的 Markdown，包含：
 
-- 一句话总结
-- 主要观点
-- 相关知识点
-- 可行动事项
-- 值得回听的原声摘录
-- 可建立的双链
+- YAML frontmatter。
+- 节目信息 Callout。
+- 一句话总结和整集主线。
+- Topic Map。
+- 核心观点。
+- 关键概念与知识点。
+- 人物 / 书籍 / 作品 / 事件表格。
+- 值得摘录的原话。
+- 我的认知增量。
+- 可沉淀为 Obsidian 原子笔记的标题。
+- 行动项 / 后续阅读。
+- 标签建议。
+- Transcript 索引。
+
+模板会要求 DeepSeek 克制地使用 Obsidian `[[双向链接]]`，优先链接重要概念、人物、书籍、理论、事件、地点、机构和方法论。
 
 ### 11. Markdown 下载
 

@@ -416,23 +416,188 @@ function buildDeepSeekPrompt() {
   const tags = document.querySelector("#tagInput").value.trim();
   const transcriptText = rawTranscript.value.trim();
   const language = document.querySelector("#languageSelect").selectedOptions[0].textContent;
+  const generatedAt = new Date().toLocaleString("zh-CN");
+  const transcriptSource = activeEpisode.transcriptSource || "manual";
+  const episodeUrl = activeEpisode.webUrl || activeEpisode.sourceUrl || "";
+  const audioUrl = activeEpisode.audioUrl || "";
+  const pubDate = activeEpisode.pubDate || "";
 
-  return `请基于下面的播客 transcript 生成一份可以直接放进 Obsidian 的 Markdown 笔记。
+  return `你是一个严谨的播客知识管理助手，目标是把一整期播客 transcript 整理成适合 Obsidian 知识库长期保存的 Markdown 笔记。
 
-要求：
-- 只能基于 transcript，不要编造没有出现的信息。
-- 保留关键时间戳，重要原话用引用块。
-- 输出结构包含：一句话总结、主要观点、相关知识点、可行动事项、值得回听的原声摘录、可建立的双链。
-- 如果 transcript 里有主持人和嘉宾，请尽量区分观点来源。
+你必须遵守：
+1. 只能基于 transcript 和节目元信息整理，不要编造没有出现的事实。
+2. 如果 transcript 有断句、口语、重复、明显转写空格问题，请在不改变原意的前提下整理为清晰中文。
+3. 输出必须是完整 Markdown，不要解释你的处理过程。
+4. 必须使用 Obsidian 友好的格式：YAML frontmatter、[[双向链接]]、标签、标题层级、引用块、任务列表。
+5. 双向链接要克制但有价值，只给重要概念、人物、书籍、理论、事件、地点、机构、方法论加 [[链接]]。
+6. 每个重要观点尽量保留时间戳，方便回听。
+7. 如果 transcript 信息不足，请写“transcript 中未明确说明”，不要猜。
+
+整理偏好：
 - 模板偏好：${template}
 - 标签：${tags}
 - 输出语言：${language}
-- 只输出 Markdown 正文，不要额外解释。
 
-节目：${activeEpisode.show} - ${activeEpisode.title}
+节目元信息：
+- 节目名称：${activeEpisode.show}
+- 单集标题：${activeEpisode.title}
+- 发布时间：${pubDate || "transcript 中未明确说明"}
+- 时长：${activeEpisode.duration || "未知时长"}
+- 单集链接：${episodeUrl || "transcript 中未明确说明"}
+- 音频链接：${audioUrl || "transcript 中未明确说明"}
+- 转写来源：${transcriptSource}
+- 整理日期：${generatedAt}
+
+请严格按以下结构输出：
+
+---
+type: podcast-note
+show: "${frontmatterEscape(activeEpisode.show)}"
+episode: "${frontmatterEscape(activeEpisode.title)}"
+date: "${frontmatterEscape(pubDate)}"
+duration: "${frontmatterEscape(activeEpisode.duration || "未知时长")}"
+source: "${frontmatterEscape(episodeUrl)}"
+audio: "${frontmatterEscape(audioUrl)}"
+transcript_source: "${frontmatterEscape(transcriptSource)}"
+status: processed
+tags:
+  - podcast
+  - podnote
+---
+
+# ${activeEpisode.title}
+
+> [!info] 节目信息
+> - 播客：[[${activeEpisode.show}]]
+> - 单集：${activeEpisode.title}
+> - 时长：${activeEpisode.duration || "未知时长"}
+> - 链接：${episodeUrl || "transcript 中未明确说明"}
+> - 整理日期：${generatedAt}
+
+## 一句话总结
+
+用 1-2 句话说明这一集最核心的讨论对象、问题意识和结论。不要写泛泛而谈的宣传语。
+
+## 这集在讲什么
+
+用 3-5 段自然语言概括这一集的主线。要求说明讨论从哪里开始，如何展开，最后落到哪里。不要只罗列点，要写出逻辑关系。如果有争议、反方观点、历史背景或案例，要指出来。
+
+## Topic Map
+
+用 Markdown 表格列出这一集的主要 topic。
+
+| Topic | 这一部分在讨论什么 | 相关概念 | 时间戳 |
+| --- | --- | --- | --- |
+
+要求：
+- Topic 应该是语义主题，不是机械章节名。
+- 相关概念使用 Obsidian 双链，例如 [[启蒙运动]]、[[公共空间]]。
+- 时间戳用 transcript 中出现的时间。
+
+## 核心观点
+
+整理 5-10 条最重要的观点。每条使用以下格式：
+
+### 观点标题
+
+- 时间戳：\`[xx:xx]\`
+- 核心意思：
+- 为什么重要：
+- 相关概念：[[概念A]]、[[概念B]]
+- 可以继续追问：
+
+## 关键概念与知识点
+
+列出本集出现的关键概念、人物、书籍、理论、历史事件、机构或方法论。每条使用以下格式：
+
+### [[概念名]]
+
+- 出现场景：
+- 在本集中的含义：
+- 与哪些概念相关：[[概念A]]、[[概念B]]
+- 我可以如何理解它：
+
+如果 transcript 中只是提到名字但没有解释，请标注“transcript 中未展开”。
+
+## 人物 / 书籍 / 作品 / 事件
+
+如果 transcript 中出现人物、书籍、电影、理论、历史事件、地点、机构，请整理成表格。
+
+| 类型 | 名称 | 本集如何提到 | 可链接笔记 |
+| --- | --- | --- | --- |
+
+可链接笔记一列使用 [[名称]]。
+
+## 值得摘录的原话
+
+选择 5-8 条值得保存的原话或近似原话。每条必须带时间戳。不要选空泛句子，优先选择有判断、有洞察、有概念密度的表达。
+
+格式：
+
+> [xx:xx] 原话内容
+
+## 我的认知增量
+
+请从“扩展认知边界”的角度，提炼这集对听众可能有价值的新视角。
+
+### 我以前可能忽略了什么
+
+### 这一集提供了什么新框架
+
+### 它改变了我对什么问题的理解
+
+### 值得继续研究的问题
+
+## 可沉淀为 Obsidian 原子笔记
+
+请生成 5-10 条可以单独成为 Obsidian 笔记的原子笔记标题。
+
+格式：
+
+- [[原子笔记标题]]：一句话说明这条笔记应该写什么。
+
+要求：
+- 标题要像知识卡片，不要像章节标题。
+- 尽量使用判断句或概念句。
+- 不要太宽泛。
+
+## 行动项 / 后续阅读
+
+如果 transcript 中有明确提到可以阅读、搜索、观看、实践的内容，请列出任务。
+
+格式：
+
+- [ ] 阅读 / 搜索 / 了解 [[主题]]
+- [ ] 回听 \`[xx:xx]\` 附近关于某问题的讨论
+
+如果没有明确行动项，请写“本集没有明确行动项”。
+
+## 标签建议
+
+给出 5-10 个适合 Obsidian 的标签。
+
+格式：
+#播客 #知识管理 #历史 #商业 #人物研究
+
+## Transcript 索引
+
+按照主题整理时间线，不要逐字复制全文。
+
+格式：
+
+- \`[00:00]\` 主题 A：这一段主要讲什么
+- \`[12:30]\` 主题 B：这一段主要讲什么
+- \`[35:10]\` 主题 C：这一段主要讲什么
 
 Transcript:
 ${transcriptText}`;
+}
+
+function frontmatterEscape(value) {
+  return String(value || "")
+    .replaceAll("\\", "\\\\")
+    .replaceAll('"', '\\"')
+    .replace(/\r?\n/g, " ");
 }
 
 async function analyzeWithDeepSeek() {
@@ -461,7 +626,8 @@ async function analyzeWithDeepSeek() {
         messages: [
           {
             role: "system",
-            content: "你是一个播客知识管理助手，擅长把 transcript 整理成严谨、可复盘、适合 Obsidian 的中文 Markdown。"
+            content:
+              "你是一个严谨的 Obsidian 播客知识库编辑器。你擅长把长 transcript 整理成可复盘、可链接、可长期保存的中文 Markdown 知识笔记。只输出 Markdown，不要解释过程，不要编造 transcript 中没有的信息。"
           },
           {
             role: "user",
