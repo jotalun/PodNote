@@ -1,6 +1,6 @@
 # PodNote Desktop 产品说明
 
-版本：`0.16.1`  
+版本：`0.16.2`  
 更新日期：2026-05-18
 
 ## 产品定位
@@ -37,6 +37,7 @@ PODNOTE_DAILY_TRANSCRIBE_MINUTES=120
 PODNOTE_MAX_SINGLE_TRANSCRIBE_MINUTES=120
 PODNOTE_MONTHLY_ANALYZE_COUNT=30
 PODNOTE_GLOBAL_DAILY_TRANSCRIBE_MINUTES=1000
+PODNOTE_GLOBAL_DAILY_COST_USD=20
 ```
 
 页面顶部会显示当前邀请码的剩余转写分钟数和 DeepSeek 分析次数。
@@ -119,6 +120,7 @@ https://www.xiaoyuzhoufm.com/podcast/5e4ee557418a84a0466737b7
 - 当前 transcript 可以直接下载为 `.txt` 文件。
 - OpenAI API Key 和 Deepgram API Key 只放在后端环境变量，不在页面暴露。
 - 生成前后都会由服务端检查额度；同一集如果已经有服务端 transcript 缓存，会直接复用缓存，不重复扣转写费用。
+- 全站每日预算可以通过 `PODNOTE_GLOBAL_DAILY_COST_USD` 控制，超过预算后新的转写请求会被服务端拒绝。
 
 当前限制：
 

@@ -1,6 +1,6 @@
 # Cloudflare 部署说明
 
-版本：`0.16.1`  
+版本：`0.16.2`  
 更新日期：2026-05-18
 
 ## 线上版能做什么
@@ -184,6 +184,7 @@ PODNOTE_DAILY_TRANSCRIBE_MINUTES=120
 PODNOTE_MAX_SINGLE_TRANSCRIBE_MINUTES=120
 PODNOTE_MONTHLY_ANALYZE_COUNT=30
 PODNOTE_GLOBAL_DAILY_TRANSCRIBE_MINUTES=1000
+PODNOTE_GLOBAL_DAILY_COST_USD=20
 ```
 
 设置后重新部署一次。
@@ -196,6 +197,7 @@ KV 用来长期保存：
 - 每个用户的每日 / 每月转写额度。
 - 每个用户的 DeepSeek 分析次数。
 - 服务端 transcript 缓存，避免同一集重复转写。
+- 全站每日美元预算上限，避免突然爆量。
 
 创建 KV namespace 后，在 Pages 项目里添加绑定：
 
