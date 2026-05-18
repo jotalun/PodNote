@@ -68,6 +68,7 @@ let currentSpeed = 1.25;
 let savedSettings = {};
 let pendingTranscribeConfirmation = false;
 let pendingTranscribeTimer = 0;
+const maxTranscribeBytes = 25 * 1024 * 1024;
 
 const episodeList = document.querySelector("#episodeList");
 const transcriptEl = document.querySelector("#transcript");
@@ -173,8 +174,14 @@ function updateTranscriptStatus(message = "") {
   }
 
   const estimate = estimateTranscriptionCost(activeEpisode.duration);
-  const costText = estimate ? ` 生成 transcript 预计约 $${estimate}。` : "";
+  const limitText = isAudioOverTranscribeLimit(activeEpisode)
+    ? `这集音频约 ${formatBytes(activeEpisode.audioBytes)}，超过当前 25MB 转写上限。`
+    : "";
+  const costText = estimate && !limitText ? ` 生成 transcript 预计约 $${estimate}。` : "";
   transcriptStatus.textContent = activeEpisode.transcriptStatus || `这期还没有 transcript。可以先自动查找公开文字稿；没有的话再生成。${costText}`;
+  if (limitText) {
+    transcriptStatus.textContent = activeEpisode.transcriptStatus || `这期还没有 transcript。可以先自动查找公开文字稿。${limitText}`;
+  }
 }
 
 function setCoverBackground(element, episode) {
@@ -523,6 +530,14 @@ async function generateTranscriptForActiveEpisode() {
     return;
   }
 
+  if (isAudioOverTranscribeLimit(activeEpisode)) {
+    const message = `这集音频约 ${formatBytes(activeEpisode.audioBytes)}，超过当前 25MB 转写上限。下一步需要做音频切片转写，或接入 Deepgram 这类支持长音频 URL 的服务。`;
+    activeEpisode.transcriptStatus = message;
+    updateTranscriptStatus(message);
+    showToast("音频太大，暂时不能直接转写");
+    return;
+  }
+
   const estimate = estimateTranscriptionCost(activeEpisode.duration);
   const costText = estimate ? `预计费用约 $${estimate}。` : "会产生 OpenAI 转写费用。";
   if (!pendingTranscribeConfirmation) {
@@ -673,14 +688,14 @@ async function loadRssFeed(feedUrl = document.querySelector("#rssInput").value.t
     if (!response.ok) throw new Error(data.error || "链接解析失败");
 
     const parsed = parsePodcastFeed(data.xml, data.url || feedUrl);
-    if (!parsed.episodes.length) throw new Error("没有在 RSS 中找到可播放单集");
+    if (!parsed.episodes.length) throw new Error("没有在这个链接中找到可播放单集");
 
     episodes = parsed.episodes;
     activeEpisode = findEpisodeFromSource(episodes, feedUrl, data.sourceUrl) || episodes[0];
     document.querySelector("#rssInput").value = feedUrl;
     renderEpisode();
     document.querySelector("#stepSource").classList.add("done");
-    showToast(`${data.discovered ? "已从网页找到 RSS，" : ""}已导入 ${parsed.episodes.length} 集：${parsed.showTitle}`);
+    showToast(`${importSourceLabel(data)}已导入 ${parsed.episodes.length} 集：${parsed.showTitle}`);
   } catch (error) {
     console.error(error);
     showToast(error.message || "链接解析失败");
@@ -688,6 +703,15 @@ async function loadRssFeed(feedUrl = document.querySelector("#rssInput").value.t
     importButton.disabled = false;
     importButton.textContent = "解析链接";
   }
+}
+
+function importSourceLabel(data = {}) {
+  if (data.platform === "xiaoyuzhou") {
+    const skipped = data.skippedCount ? `，跳过 ${data.skippedCount} 个付费或私密单集` : "";
+    return `已从小宇宙公开页面导入${skipped}，`;
+  }
+
+  return data.discovered ? "已从网页找到 RSS，" : "";
 }
 
 function parsePodcastFeed(xml, sourceUrl) {
@@ -707,11 +731,13 @@ function parsePodcastFeed(xml, sourceUrl) {
       const title = readFirstText(item, ["title"]) || `未命名单集 ${index + 1}`;
       const desc = stripHtml(readFirstText(item, ["description", "summary", "content:encoded", "content"])) || "这集还没有简介。";
       const audioUrl = readAudioUrl(item);
+      const audioBytes = readAudioBytes(item);
       const duration = normalizeDuration(readFirstText(item, ["itunes:duration", "duration"]));
       const image = readImage(item) || showImage;
       const pubDate = readFirstText(item, ["pubDate", "published", "updated"]);
       const webUrl = resolveUrl(readEpisodePageUrl(item), sourceUrl);
       const transcriptUrl = resolveUrl(readTranscriptUrl(item), sourceUrl);
+      const chapters = readChaptersFromDescription(desc);
 
       return {
         id: `rss-${hashString(`${sourceUrl}-${webUrl || title}-${index}`)}`,
@@ -723,19 +749,44 @@ function parsePodcastFeed(xml, sourceUrl) {
         color: colorForIndex(index),
         image,
         audioUrl,
+        audioBytes,
         pubDate,
         webUrl,
         transcriptUrl,
         sourceUrl,
         hasTranscript: false,
         rawTranscript: "",
-        chapters: [["00:00", "节目简介", desc.slice(0, 140)]],
-        transcript: [["00:00", "这集已经从 RSS 导入。请粘贴 transcript，或接入转写后再整理笔记。", ""]]
+        chapters: chapters.length ? chapters : [["00:00", "节目简介", desc.slice(0, 140)]],
+        transcript: [["00:00", "这集已经导入。请粘贴 transcript，或生成转写后再整理笔记。", ""]]
       };
     })
     .filter((episode) => episode.audioUrl);
 
   return { showTitle, episodes: parsedEpisodes };
+}
+
+function isAudioOverTranscribeLimit(episode) {
+  return Number(episode.audioBytes || 0) > maxTranscribeBytes;
+}
+
+function formatBytes(bytes) {
+  const value = Number(bytes || 0);
+  if (!value) return "未知大小";
+  return `${(value / 1024 / 1024).toFixed(1)}MB`;
+}
+
+function readChaptersFromDescription(desc) {
+  return String(desc || "")
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .map((line) => line.match(/^(?:[-–—*]\s*)?((?:\d{1,2}:)?\d{1,2}:\d{2})\s+(.+)$/))
+    .filter(Boolean)
+    .slice(0, 40)
+    .map((match) => {
+      const time = secondsToTimestamp(parseTimeToSeconds(match[1]));
+      const title = match[2].replace(/^[-–—]\s*/, "").trim();
+      return [time, title, title];
+    });
 }
 
 function findEpisodeFromSource(items, inputUrl, sourceUrl = "") {
@@ -787,6 +838,11 @@ function readAudioUrl(item) {
   });
 
   return audioLink?.getAttribute("href") || audioLink?.textContent?.trim() || "";
+}
+
+function readAudioBytes(item) {
+  const enclosure = item.querySelector("enclosure[url]");
+  return Number(enclosure?.getAttribute("length") || 0);
 }
 
 function readEpisodePageUrl(item) {

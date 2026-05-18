@@ -1,8 +1,8 @@
 # PodNote Desktop
 
-一个 transcript-first 的播客知识工作台：粘贴播客网页或 RSS，播放单集，粘贴 transcript，再用 DeepSeek 整理成 Markdown 笔记。
+一个 transcript-first 的播客知识工作台：粘贴小宇宙、播客网页或 RSS，播放单集，获取 transcript，再用 DeepSeek 整理成 Markdown 笔记。
 
-当前版本：`0.9.0`
+当前版本：`0.10.0`
 
 ## 文档入口
 
@@ -23,7 +23,7 @@ npm start
 http://127.0.0.1:4174
 ```
 
-也可以直接带播客网页或 RSS 地址打开：
+也可以直接带小宇宙、播客网页或 RSS 地址打开：
 
 ```text
 http://127.0.0.1:4174/?rss=http%3A%2F%2F127.0.0.1%3A4174%2Ffixtures%2Fsample-feed.xml
@@ -32,7 +32,7 @@ http://127.0.0.1:4174/?rss=http%3A%2F%2F127.0.0.1%3A4174%2Ffixtures%2Fsample-fee
 ## 使用流程
 
 1. 输入访问密码进入页面，默认密码是 `123456`。
-2. 在页面顶部粘贴播客网页或 RSS 链接并解析。
+2. 在页面顶部粘贴小宇宙、播客网页或 RSS 链接并解析。
 3. 选择一集播放。
 4. 点击 `自动查找` 获取公开 transcript；没有的话点击 `生成 transcript`。
 5. 点击 `DeepSeek 分析`。
