@@ -72,7 +72,7 @@ const maxTranscribeBytes = 25 * 1024 * 1024;
 const openAiTranscribeCostPerMinuteUsd = 0.003;
 const deepgramTranscribeCostPerMinuteUsd = 0.0043;
 const dailyTranscribeLimitMinutes = 300;
-const transcriptCachePrefix = "podnote-transcript-cache-v3:";
+const transcriptCachePrefix = "podnote-transcript-cache-v4:";
 const transcribeUsageKey = "podnote-transcribe-usage";
 
 const episodeList = document.querySelector("#episodeList");
@@ -861,13 +861,22 @@ function syncTranscriptWithAudio(currentSeconds, options = {}) {
   activeLine.classList.add("active");
 
   if (options.scroll !== false) {
-    activeLine.scrollIntoView({ block: "center", behavior: "smooth" });
+    scrollTranscriptLineIntoView(activeLine);
   }
 }
 
 function updatePlayerCaption(time, text) {
   captionTime.textContent = time || "00:00";
   captionText.textContent = text || "等待字幕";
+}
+
+function scrollTranscriptLineIntoView(line) {
+  const lineTop = line.offsetTop;
+  const targetTop = lineTop - transcriptEl.clientHeight / 2 + line.clientHeight / 2;
+  transcriptEl.scrollTo({
+    top: Math.max(0, targetTop),
+    behavior: "smooth"
+  });
 }
 
 function findTranscriptIndexAtTime(rows, currentSeconds) {

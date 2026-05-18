@@ -480,6 +480,33 @@ input[type="range"] {
   line-height: 1.45;
 }
 
+.player-transcript-panel {
+  margin-top: 16px;
+  border-top: 1px solid var(--line);
+  padding-top: 14px;
+}
+
+.player-transcript-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.player-transcript-header h3 {
+  margin: 0;
+  font-size: 15px;
+}
+
+.listen-panel .transcript {
+  max-height: 230px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.5);
+  padding: 8px;
+}
+
 .controls,
 .action-row,
 .note-actions,
