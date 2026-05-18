@@ -1,6 +1,6 @@
 # PodNote Desktop 产品说明
 
-版本：`0.11.0`  
+版本：`0.12.0`  
 更新日期：2026-05-18
 
 ## 产品定位
@@ -107,6 +107,7 @@ https://www.xiaoyuzhoufm.com/podcast/5e4ee557418a84a0466737b7
 - 同一浏览器里生成过的 transcript 会缓存，重复点击会直接载入缓存，避免重复扣费。
 - 浏览器端有默认每日 300 分钟转写保护，防止误触连续转写。
 - 结果会自动填入 transcript 输入区，并刷新字幕预览和 Markdown 草稿。
+- 当前 transcript 可以直接下载为 `.txt` 文件。
 - OpenAI API Key 和 Deepgram API Key 只放在后端环境变量，不在页面暴露。
 
 当前限制：
@@ -120,10 +121,11 @@ https://www.xiaoyuzhoufm.com/podcast/5e4ee557418a84a0466737b7
 中间区域展示逐句 transcript，每一句带时间戳。当前支持：
 
 - 查看逐句中文 transcript。
+- 播放真实音频时，字幕预览会按当前播放时间自动高亮并滚动。
 - 点击某句高亮。
 - 切换中英对照展示。
 
-导入真实 RSS 或小宇宙公开音频后，点击 transcript 时间戳会跳转到音频对应位置。
+导入真实 RSS 或小宇宙公开音频后，点击 transcript 时间戳会跳转到音频对应位置。播放时，当前时间对应的字幕会自动同步到可见区域。
 
 ### 8. 真实音频播放器
 

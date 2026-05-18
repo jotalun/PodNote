@@ -542,9 +542,10 @@ input[type="range"] {
 }
 
 .line.active {
-  border-color: var(--line);
-  background: rgba(255, 255, 255, 0.9);
+  border-color: #111111;
+  background: rgba(17, 17, 17, 0.94);
   color: var(--ink);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.14);
 }
 
 .line time {
@@ -557,6 +558,13 @@ input[type="range"] {
   min-width: 0;
   font-size: 13px;
   line-height: 1.6;
+}
+
+.line.active,
+.line.active time,
+.line.active p,
+.line.active small {
+  color: #ffffff;
 }
 
 .line small {

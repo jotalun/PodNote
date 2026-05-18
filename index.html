@@ -3,9 +3,9 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="podnote-version" content="0.11.0" />
+    <meta name="podnote-version" content="0.12.0" />
     <title>PodNote</title>
-    <link rel="stylesheet" href="./styles.css?v=0.11.0" />
+    <link rel="stylesheet" href="./styles.css?v=0.12.0" />
   </head>
   <body>
     <div class="app-frame">
@@ -104,6 +104,7 @@
               <div class="transcript-actions">
                 <button class="text-button" id="fetchTranscriptButton" type="button">自动查找</button>
                 <button class="secondary-button" id="generateTranscriptButton" type="button">生成 transcript</button>
+                <button class="text-button" id="downloadTranscriptButton" type="button">下载 transcript</button>
               </div>
             </div>
             <p class="transcript-helper" id="transcriptStatus">先自动查找公开文字稿；没有的话再生成 transcript。</p>
@@ -164,6 +165,6 @@
     </div>
 
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
-    <script src="./app.js?v=0.11.0"></script>
+    <script src="./app.js?v=0.12.0"></script>
   </body>
 </html>

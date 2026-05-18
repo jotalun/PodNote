@@ -1,12 +1,26 @@
 # 更新记录
 
+## 0.12.0 - 2026-05-18
+
+### 新增
+
+- 新增 `下载 transcript` 按钮，可以直接下载当前 transcript 的 `.txt` 文件。
+- 字幕预览会跟随真实音频播放进度自动高亮并滚动，接近音乐播放器歌词效果。
+
+### 改进
+
+- Deepgram 结果解析改为优先使用 paragraphs / sentences，减少中文 transcript 被切成很多短碎句。
+- Deepgram 兜底解析会合并过短 utterances，并清理中文词之间的多余空格。
+- Deepgram 输出如果缺少句末标点，会对中文句子做轻量补全。
+- transcript 预览上限从 120 行提高到 1200 行，长播客播放到后半段也能继续同步字幕。
+
 ## 0.11.0 - 2026-05-18
 
 ### 新增
 
 - `/api/transcribe` 支持自动分流：25MB 以下音频继续走 OpenAI，超过 25MB 的公开音频走 Deepgram URL 转写。
 - 新增 `DEEPGRAM_API_KEY` 环境变量，长音频转写不再需要在 Cloudflare 下载整段音频。
-- Deepgram 转写会返回带时间戳的 transcript，优先使用 utterances，其次使用 paragraphs 或 words。
+- Deepgram 转写会返回带时间戳的 transcript。
 - 页面生成 transcript 前会显示服务商、音频大小和预估费用，并保留二次确认。
 - 浏览器本地会缓存已生成 transcript，同一单集重复点击会直接载入缓存，避免重复扣费。
 - 新增浏览器端每日 300 分钟转写保护，降低误触导致的成本风险。

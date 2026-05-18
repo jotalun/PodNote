@@ -72,7 +72,7 @@ const maxTranscribeBytes = 25 * 1024 * 1024;
 const openAiTranscribeCostPerMinuteUsd = 0.003;
 const deepgramTranscribeCostPerMinuteUsd = 0.0043;
 const dailyTranscribeLimitMinutes = 300;
-const transcriptCachePrefix = "podnote-transcript-cache:";
+const transcriptCachePrefix = "podnote-transcript-cache-v2:";
 const transcribeUsageKey = "podnote-transcribe-usage";
 
 const episodeList = document.querySelector("#episodeList");
@@ -85,9 +85,11 @@ const analysisStatus = document.querySelector("#analysisStatus");
 const deepseekButton = document.querySelector("#deepseekButton");
 const fetchTranscriptButton = document.querySelector("#fetchTranscriptButton");
 const generateTranscriptButton = document.querySelector("#generateTranscriptButton");
+const downloadTranscriptButton = document.querySelector("#downloadTranscriptButton");
 const transcriptStatus = document.querySelector("#transcriptStatus");
 const audioPlayer = document.querySelector("#audioPlayer");
 const audioStatus = document.querySelector("#audioStatus");
+let activeTranscriptIndex = -1;
 
 function renderEpisodes(items = episodes) {
   episodeList.replaceChildren(...items.map(createEpisodeCard));
@@ -154,13 +156,17 @@ function renderTranscriptPreview() {
   transcriptEl.innerHTML = transcriptRows
     .map(
       ([time, line, english], index) => `
-        <button class="line ${index === 2 ? "active" : ""}" type="button" data-time="${time}">
+        <button class="line" type="button" data-time="${time}" data-index="${index}">
           <time>${time}</time>
           <p>${line}${bilingual && english ? `<small>${english}</small>` : ""}</p>
         </button>
       `
     )
     .join("");
+  syncTranscriptWithAudio(activeEpisode.audioUrl ? audioPlayer.currentTime : parseTimeToSeconds(transcriptRows[0]?.[0]), {
+    force: true,
+    scroll: false
+  });
 }
 
 function updateTranscriptStatus(message = "") {
@@ -660,11 +666,47 @@ function transcriptTextToRows(text) {
     return [["00:00", "请先粘贴 transcript，或点击自动查找公开文字稿。", ""]];
   }
 
-  return lines.slice(0, 120).map((line) => {
+  return lines.slice(0, 1200).map((line) => {
     const match = line.match(/^\[?(\d{1,2}:\d{2}(?::\d{2})?)\]?\s*(.*)$/);
     if (match) return [match[1], match[2] || line, ""];
     return ["00:00", line, ""];
   });
+}
+
+function syncTranscriptWithAudio(currentSeconds, options = {}) {
+  const rows = activeEpisode.transcript || [];
+  if (!rows.length) return;
+
+  const currentIndex = findTranscriptIndexAtTime(rows, currentSeconds);
+  if (currentIndex < 0) return;
+  if (!options.force && currentIndex === activeTranscriptIndex) return;
+
+  activeTranscriptIndex = currentIndex;
+  const activeLine = transcriptEl.querySelector(`.line[data-index="${currentIndex}"]`);
+  if (!activeLine) return;
+
+  transcriptEl.querySelectorAll(".line.active").forEach((line) => line.classList.remove("active"));
+  activeLine.classList.add("active");
+
+  if (options.scroll !== false) {
+    activeLine.scrollIntoView({ block: "center", behavior: "smooth" });
+  }
+}
+
+function findTranscriptIndexAtTime(rows, currentSeconds) {
+  const current = Number(currentSeconds || 0);
+  let index = 0;
+
+  for (let rowIndex = 0; rowIndex < rows.length; rowIndex += 1) {
+    const seconds = parseTimeToSeconds(rows[rowIndex][0]);
+    if (seconds <= current + 0.25) {
+      index = rowIndex;
+    } else {
+      break;
+    }
+  }
+
+  return index;
 }
 
 async function exportToObsidian() {
@@ -681,6 +723,31 @@ function downloadMarkdown() {
   link.download = `${activeEpisode.title}.md`;
   link.click();
   URL.revokeObjectURL(url);
+}
+
+function downloadTranscript() {
+  const transcriptText = rawTranscript.value.trim() || getEpisodeTranscriptText(activeEpisode);
+  if (!transcriptText.trim()) {
+    showToast("还没有 transcript 可下载");
+    return;
+  }
+
+  const header = `# ${activeEpisode.title}\n\n节目：${activeEpisode.show}\n导出时间：${new Date().toLocaleString()}\n\n`;
+  const blob = new Blob([`${header}${transcriptText}\n`], { type: "text/plain;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `${sanitizeDownloadName(activeEpisode.title)} transcript.txt`;
+  link.click();
+  URL.revokeObjectURL(url);
+}
+
+function sanitizeDownloadName(value) {
+  return String(value || "podcast")
+    .replace(/[\\/:*?"<>|]/g, "-")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 80);
 }
 
 async function handleOpmlImport(event) {
@@ -1083,6 +1150,10 @@ document.querySelector("#opmlInput").addEventListener("change", handleOpmlImport
 deepseekButton.addEventListener("click", analyzeWithDeepSeek);
 fetchTranscriptButton.addEventListener("click", fetchTranscriptForActiveEpisode);
 generateTranscriptButton.addEventListener("click", generateTranscriptForActiveEpisode);
+downloadTranscriptButton.addEventListener("click", () => {
+  downloadTranscript();
+  showToast("已生成 transcript 文件");
+});
 
 document.querySelector("#copyButton").addEventListener("click", async () => {
   await navigator.clipboard.writeText(noteOutput.value);
@@ -1120,8 +1191,9 @@ document.querySelector("#forwardButton").addEventListener("click", () => {
 transcriptEl.addEventListener("click", (event) => {
   const line = event.target.closest(".line");
   if (!line) return;
-  document.querySelectorAll(".line").forEach((item) => item.classList.remove("active"));
+  transcriptEl.querySelectorAll(".line").forEach((item) => item.classList.remove("active"));
   line.classList.add("active");
+  activeTranscriptIndex = Number(line.dataset.index || 0);
   if (activeEpisode.audioUrl) {
     audioPlayer.currentTime = parseTimeToSeconds(line.dataset.time);
   }
@@ -1139,6 +1211,7 @@ audioPlayer.addEventListener("timeupdate", () => {
   activeEpisode.progress = progress;
   document.querySelector("#progress").value = progress;
   document.querySelector("#currentTime").textContent = secondsToTimestamp(audioPlayer.currentTime);
+  syncTranscriptWithAudio(audioPlayer.currentTime);
 });
 
 audioPlayer.addEventListener("play", () => {
