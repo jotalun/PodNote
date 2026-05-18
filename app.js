@@ -72,7 +72,7 @@ const maxTranscribeBytes = 25 * 1024 * 1024;
 const openAiTranscribeCostPerMinuteUsd = 0.003;
 const deepgramTranscribeCostPerMinuteUsd = 0.0043;
 const dailyTranscribeLimitMinutes = 300;
-const transcriptCachePrefix = "podnote-transcript-cache-v2:";
+const transcriptCachePrefix = "podnote-transcript-cache-v3:";
 const transcribeUsageKey = "podnote-transcribe-usage";
 
 const episodeList = document.querySelector("#episodeList");
@@ -89,6 +89,8 @@ const downloadTranscriptButton = document.querySelector("#downloadTranscriptButt
 const transcriptStatus = document.querySelector("#transcriptStatus");
 const audioPlayer = document.querySelector("#audioPlayer");
 const audioStatus = document.querySelector("#audioStatus");
+const captionTime = document.querySelector("#captionTime");
+const captionText = document.querySelector("#captionText");
 let activeTranscriptIndex = -1;
 
 function renderEpisodes(items = episodes) {
@@ -217,6 +219,7 @@ function setupAudioForEpisode(episode) {
 
   if (!episode.audioUrl) {
     audioStatus.textContent = "示例单集，尚未连接真实音频";
+    updatePlayerCaption("00:00", "等待字幕");
     return;
   }
 
@@ -224,6 +227,7 @@ function setupAudioForEpisode(episode) {
   audioPlayer.playbackRate = currentSpeed;
   audioPlayer.load();
   audioStatus.textContent = "真实音频已连接，点击播放开始收听";
+  syncTranscriptWithAudio(parseTimeToSeconds(activeEpisode.transcript?.[0]?.[0]), { force: true, scroll: false });
 }
 
 function generateNote() {
@@ -824,6 +828,7 @@ function transcriptSourceLabel(sourceType = "") {
 
 function transcriptTextToRows(text) {
   const lines = String(text || "")
+    .replace(/\s*(?=\[\d{1,2}:\d{2}(?::\d{2})?\])/g, "\n")
     .split("\n")
     .map((line) => line.trim())
     .filter(Boolean);
@@ -851,12 +856,18 @@ function syncTranscriptWithAudio(currentSeconds, options = {}) {
   const activeLine = transcriptEl.querySelector(`.line[data-index="${currentIndex}"]`);
   if (!activeLine) return;
 
+  updatePlayerCaption(rows[currentIndex][0], rows[currentIndex][1]);
   transcriptEl.querySelectorAll(".line.active").forEach((line) => line.classList.remove("active"));
   activeLine.classList.add("active");
 
   if (options.scroll !== false) {
     activeLine.scrollIntoView({ block: "center", behavior: "smooth" });
   }
+}
+
+function updatePlayerCaption(time, text) {
+  captionTime.textContent = time || "00:00";
+  captionText.textContent = text || "等待字幕";
 }
 
 function findTranscriptIndexAtTime(rows, currentSeconds) {
@@ -1360,6 +1371,7 @@ transcriptEl.addEventListener("click", (event) => {
   transcriptEl.querySelectorAll(".line").forEach((item) => item.classList.remove("active"));
   line.classList.add("active");
   activeTranscriptIndex = Number(line.dataset.index || 0);
+  updatePlayerCaption(line.dataset.time, line.querySelector("p")?.textContent || "");
   if (activeEpisode.audioUrl) {
     audioPlayer.currentTime = parseTimeToSeconds(line.dataset.time);
   }

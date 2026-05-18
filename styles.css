@@ -452,6 +452,34 @@ input[type="range"] {
   font-size: 12px;
 }
 
+.player-caption {
+  display: grid;
+  grid-template-columns: 58px minmax(0, 1fr);
+  gap: 12px;
+  align-items: start;
+  min-height: 76px;
+  margin: 16px 0 15px;
+  border: 1px solid rgba(17, 17, 17, 0.12);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.72);
+  padding: 12px 13px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8);
+}
+
+.player-caption time {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.55;
+}
+
+.player-caption p {
+  color: var(--ink);
+  font-size: clamp(15px, 1.7vw, 21px);
+  font-weight: 760;
+  line-height: 1.45;
+}
+
 .controls,
 .action-row,
 .note-actions,

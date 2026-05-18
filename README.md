@@ -2,7 +2,7 @@
 
 一个 transcript-first 的播客知识工作台：粘贴小宇宙、播客网页或 RSS，播放单集，获取 transcript，再用 DeepSeek 整理成 Markdown 笔记。
 
-当前版本：`0.13.0`
+当前版本：`0.14.0`
 
 ## 文档入口
 
