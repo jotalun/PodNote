@@ -4,12 +4,21 @@ import { extname, join, resolve } from "node:path";
 import {
   clearAuthCookie,
   createAuthCookie,
-  getAuthPassword,
-  isAuthorized,
+  getAuthorizedSession,
+  getSessionSecret,
   renderLoginPage,
   shouldReturnJson,
   unauthorizedJson
 } from "./lib/auth.js";
+import {
+  commitAnalyzeUsage,
+  commitTranscribeUsage,
+  getQuotaSnapshot,
+  guardAnalyzeQuota,
+  guardTranscribeQuota,
+  hasInviteConfiguration,
+  redeemInvite
+} from "./lib/metering.js";
 import { resolvePodcastSource } from "./lib/podcast-source.js";
 import { findTranscript } from "./lib/transcript.js";
 import { transcribeAudio } from "./lib/transcribe.js";
@@ -30,19 +39,20 @@ const mimeTypes = {
 createServer(async (request, response) => {
   try {
     const url = new URL(request.url || "/", `http://${request.headers.host}`);
-    const password = getAuthPassword(process.env);
+    const secret = getSessionSecret(process.env);
 
-    if (await handleAuth(request, response, url, password)) {
+    if (await handleAuth(request, response, url, secret)) {
       return;
     }
 
-    if (!(await isAuthorized(request.headers.cookie, password))) {
+    const session = await getAuthorizedSession(request.headers.cookie, secret);
+    if (!session) {
       handleUnauthorized(response, url);
       return;
     }
 
     if (request.method === "POST" && url.pathname === "/api/analyze") {
-      await handleAnalyze(request, response);
+      await handleAnalyze(request, response, session);
       return;
     }
 
@@ -62,7 +72,12 @@ createServer(async (request, response) => {
     }
 
     if (request.method === "POST" && url.pathname === "/api/transcribe") {
-      await handleTranscribe(request, response);
+      await handleTranscribe(request, response, session);
+      return;
+    }
+
+    if (request.method === "GET" && url.pathname === "/api/me") {
+      await handleMe(response, session);
       return;
     }
 
@@ -80,16 +95,17 @@ createServer(async (request, response) => {
   console.log(`PodNote running at http://${host}:${port}`);
 });
 
-async function handleAuth(request, response, url, password) {
+async function handleAuth(request, response, url, secret) {
   if (request.method === "POST" && url.pathname === "/api/auth/login") {
     const body = await readRequestText(request);
     const params = new URLSearchParams(body);
     const nextUrl = safeNext(params.get("next"));
+    const user = await redeemInvite(params.get("inviteCode") || params.get("password"), process.env);
 
-    if (String(params.get("password") || "") === password) {
+    if (user) {
       response.writeHead(303, {
         Location: nextUrl,
-        "Set-Cookie": await createAuthCookie(password, url.href),
+        "Set-Cookie": await createAuthCookie(user, secret, url.href),
         "Cache-Control": "no-store"
       });
       response.end();
@@ -122,7 +138,7 @@ function handleUnauthorized(response, url) {
   }
 
   response.writeHead(200, { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store" });
-  response.end(renderLoginPage({ error: url.searchParams.get("auth") === "failed", next: `${url.pathname}${url.search}` }));
+  response.end(renderLoginPage({ error: url.searchParams.get("auth") === "failed", setup: !hasInviteConfiguration(process.env) || !process.env.PODNOTE_SESSION_SECRET, next: `${url.pathname}${url.search}` }));
 }
 
 function safeNext(value) {
@@ -132,7 +148,7 @@ function safeNext(value) {
   return next;
 }
 
-async function handleAnalyze(request, response) {
+async function handleAnalyze(request, response, session) {
   const body = await readJson(request);
   const apiKey = body.apiKey || process.env.DEEPSEEK_API_KEY;
 
@@ -141,25 +157,48 @@ async function handleAnalyze(request, response) {
     return;
   }
 
-  const upstream = await fetch(deepSeekEndpoint, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${apiKey}`
-    },
-    body: JSON.stringify({
-      model: body.model || "deepseek-v4-flash",
-      messages: body.messages,
-      thinking: { type: "disabled" },
-      stream: false
-    })
-  });
+  try {
+    await guardAnalyzeQuota(process.env, session);
 
-  const text = await upstream.text();
-  response.writeHead(upstream.status, {
-    "Content-Type": upstream.headers.get("content-type") || "application/json; charset=utf-8"
-  });
-  response.end(text);
+    const upstream = await fetch(deepSeekEndpoint, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`
+      },
+      body: JSON.stringify({
+        model: body.model || "deepseek-v4-flash",
+        messages: body.messages,
+        thinking: { type: "disabled" },
+        stream: false
+      })
+    });
+
+    const text = await upstream.text();
+    if (!upstream.ok) {
+      response.writeHead(upstream.status, {
+        "Content-Type": upstream.headers.get("content-type") || "application/json; charset=utf-8"
+      });
+      response.end(text);
+      return;
+    }
+
+    const quota = await commitAnalyzeUsage(process.env, session);
+    const payload = safeJson(text);
+    if (payload && typeof payload === "object") {
+      payload.quota = quota;
+      sendJson(response, upstream.status, payload);
+      return;
+    }
+
+    response.writeHead(upstream.status, {
+      "Content-Type": upstream.headers.get("content-type") || "application/json; charset=utf-8"
+    });
+    response.end(text);
+  } catch (error) {
+    const status = Number(error.status || 500);
+    sendJson(response, status, { error: error.message || "DeepSeek 分析失败", quota: error.quota });
+  }
 }
 
 async function handleRss(url, response) {
@@ -221,32 +260,46 @@ async function handleTranscript(url, response) {
   }
 }
 
-async function handleTranscribe(request, response) {
+async function handleTranscribe(request, response, session) {
   const body = await readJson(request);
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 540000);
 
   try {
+    const quotaGuard = await guardTranscribeQuota(process.env, session, body);
+    if (quotaGuard.cached) {
+      sendJson(response, 200, quotaGuard.cached);
+      return;
+    }
+
     const result = await transcribeAudio(body, {
       openAiApiKey: body.apiKey || process.env.OPENAI_API_KEY,
       deepgramApiKey: body.deepgramApiKey || process.env.DEEPGRAM_API_KEY,
       signal: controller.signal
     });
-    sendJson(response, 200, result);
+    const quota = await commitTranscribeUsage(process.env, session, body, result, quotaGuard);
+    sendJson(response, 200, { ...result, quota });
   } catch (error) {
     const status = Number(error.status || 502);
     const message = error.name === "AbortError" ? "音频转写超时" : error.message || "音频转写失败";
+    const quota = error.quota || (status === 429 ? await getQuotaSnapshot(process.env, session).catch(() => null) : null);
     sendJson(response, status, {
       ok: false,
       error: message,
       setupRequired: Boolean(error.setupRequired),
       contentLength: error.contentLength,
       maxBytes: error.maxBytes,
-      provider: error.provider
+      provider: error.provider,
+      quota
     });
   } finally {
     clearTimeout(timeout);
   }
+}
+
+async function handleMe(response, session) {
+  const quota = await getQuotaSnapshot(process.env, session);
+  sendJson(response, 200, { ok: true, user: quota.user, quota });
 }
 
 async function handleExport(request, response) {
@@ -306,6 +359,14 @@ async function readRequestText(request) {
 function sendJson(response, status, payload) {
   response.writeHead(status, { "Content-Type": "application/json; charset=utf-8" });
   response.end(JSON.stringify(payload));
+}
+
+function safeJson(text) {
+  try {
+    return JSON.parse(text);
+  } catch {
+    return null;
+  }
 }
 
 function sanitizeFileName(value) {

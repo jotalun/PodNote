@@ -1,3 +1,8 @@
 name = "podnote-desktop"
 pages_build_output_dir = "dist"
 compatibility_date = "2026-05-17"
+
+# Bind this after creating a Cloudflare KV namespace.
+# [[kv_namespaces]]
+# binding = "PODNOTE_KV"
+# id = "replace-with-production-kv-id"

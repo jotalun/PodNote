@@ -1,6 +1,6 @@
 # Cloudflare 部署说明
 
-版本：`0.15.3`  
+版本：`0.16.0`  
 更新日期：2026-05-18
 
 ## 线上版能做什么
@@ -13,7 +13,8 @@ Cloudflare 线上版支持：
 - 通过 `/api/transcribe` 调用 OpenAI 或 Deepgram 生成 transcript。
 - 通过 `/api/analyze` 调用 DeepSeek。
 - 生成和下载 Markdown。
-- 用访问密码保护未完善的预览版本。
+- 用邀请码保护未完善的预览版本。
+- 用 Cloudflare KV 记录用户额度和 transcript 缓存。
 
 Cloudflare 线上版不支持直接写入你电脑里的 Obsidian Vault。当前主流程统一为下载 Markdown。
 
@@ -25,7 +26,8 @@ Cloudflare 线上版不支持直接写入你电脑里的 Obsidian Vault。当前
 - DeepSeek API Key。
 - OpenAI API Key，用于没有公开 transcript 时生成文字稿。
 - Deepgram API Key，用于小宇宙等长音频 URL 转写。
-- 访问密码，默认是 `123456`。
+- 邀请码和 session secret。
+- Cloudflare KV namespace，推荐绑定名为 `PODNOTE_KV`。
 - 本机可以运行 `npx wrangler`。
 
 ## 本地构建
@@ -138,21 +140,72 @@ npx wrangler pages secret put DEEPGRAM_API_KEY --project-name podnote-desktop
 
 设置后重新部署一次。
 
-## 设置访问密码
+## 设置邀请码和额度
 
-当前默认密码是：
+必须先设置邀请码，否则线上登录页会提示还没有配置邀请码。
 
-```text
-123456
-```
-
-如果要改密码，在 Cloudflare 环境变量里添加：
+最简单的内测方式是在 Cloudflare 环境变量里添加：
 
 ```text
-PODNOTE_PASSWORD
+PODNOTE_INVITE_CODES
 ```
 
-类型可以设为 Secret，值填你的新密码。设置后重新部署一次。
+值可以是一个或多个邀请码：
+
+```text
+podnote-beta
+```
+
+多个邀请码用英文逗号隔开：
+
+```text
+alice-001,bob-002,creator-003
+```
+
+也可以给邀请码加显示名和套餐：
+
+```text
+alice-001|Alice|free,bob-002|Bob|pro
+```
+
+再添加一个 session 签名密钥：
+
+```text
+PODNOTE_SESSION_SECRET
+```
+
+值填一段足够长的随机字符串。它不等于邀请码，不要发给用户。
+
+默认额度可以通过这些变量调整：
+
+```text
+PODNOTE_MONTHLY_TRANSCRIBE_MINUTES=60
+PODNOTE_DAILY_TRANSCRIBE_MINUTES=120
+PODNOTE_MAX_SINGLE_TRANSCRIBE_MINUTES=120
+PODNOTE_MONTHLY_ANALYZE_COUNT=30
+PODNOTE_GLOBAL_DAILY_TRANSCRIBE_MINUTES=1000
+```
+
+设置后重新部署一次。
+
+## 绑定 Cloudflare KV
+
+KV 用来长期保存：
+
+- 邀请码对应的用户记录。
+- 每个用户的每日 / 每月转写额度。
+- 每个用户的 DeepSeek 分析次数。
+- 服务端 transcript 缓存，避免同一集重复转写。
+
+创建 KV namespace 后，在 Pages 项目里添加绑定：
+
+```text
+Workers & Pages → podnote-desktop → Settings → Functions → KV namespace bindings
+Variable name: PODNOTE_KV
+KV namespace: 选择你创建的 namespace
+```
+
+如果用 Wrangler，也可以把真实 namespace id 填进 `wrangler.toml` 里的注释示例后再部署。
 
 ## Cloudflare 项目设置
 
@@ -221,7 +274,7 @@ Root directory: /
 
 使用流程：
 
-1. 输入访问密码。
+1. 输入邀请码。
 2. 粘贴小宇宙、播客网页或 RSS 地址并解析。
 3. 播放音频。
 4. 点击 `自动查找` 获取公开 transcript；没有的话点击 `生成 transcript`。
@@ -230,18 +283,21 @@ Root directory: /
 
 线上版不需要在页面里填写 API Key；Cloudflare Function 会读取 `DEEPSEEK_API_KEY`、`OPENAI_API_KEY` 和 `DEEPGRAM_API_KEY`。
 
-注意：25MB 以下音频会走 OpenAI；超过 25MB 的公开音频会走 Deepgram URL 转写。浏览器本地会缓存已生成 transcript，避免同一单集重复扣费。
+注意：25MB 以下音频会走 OpenAI；超过 25MB 的公开音频会走 Deepgram URL 转写。服务端会优先检查 KV transcript 缓存，命中缓存时不再重复调用转写服务。
 
 ## 访问保护
 
-如果网站公开，别人也可能调用你的 DeepSeek API 额度。
+如果网站公开，别人也可能消耗你的转写和 DeepSeek 额度。
 
-建议先做其中一种保护：
+当前已经有：
 
-- 用 Cloudflare Access 限制只有你能访问。
-- 不公开分享部署地址。
-- 后续给产品加简单访问密码。
-- 后续给 `/api/analyze` 加限流。
+- 邀请码登录。
+- 用户级转写分钟数限制。
+- 用户级 DeepSeek 分析次数限制。
+- 全站每日转写分钟数上限。
+- 服务端 transcript 缓存。
+
+继续公开扩散前，建议再加 Cloudflare Turnstile 或 Cloudflare Access。
 
 ## 本地版和线上版区别
 
@@ -254,3 +310,6 @@ Root directory: /
 | 写入本机 Obsidian Vault | 暂不作为主流程 | 不支持 |
 | API Key 存放 | 本机环境变量或页面输入 | Cloudflare Secret |
 | 生成 transcript | OpenAI 短音频 + Deepgram 长音频 | OpenAI 短音频 + Deepgram 长音频 |
+| 邀请码登录 | 支持，内存存储 | 支持，推荐 KV 持久化 |
+| 用户额度 | 支持，内存存储 | 支持，推荐 KV 持久化 |
+| 服务端 transcript 缓存 | 支持，内存存储 | 支持，推荐 KV 持久化 |

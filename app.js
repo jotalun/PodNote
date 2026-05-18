@@ -95,6 +95,7 @@ const audioPlayer = document.querySelector("#audioPlayer");
 const audioStatus = document.querySelector("#audioStatus");
 const captionTime = document.querySelector("#captionTime");
 const captionText = document.querySelector("#captionText");
+const quotaBadge = document.querySelector("#quotaBadge");
 let activeTranscriptIndex = -1;
 
 function renderEpisodes(items = episodes) {
@@ -327,6 +328,38 @@ function showToast(message) {
   toast.textContent = message;
   toast.classList.add("show");
   window.setTimeout(() => toast.classList.remove("show"), 1800);
+}
+
+async function loadAccount() {
+  if (!quotaBadge) return;
+  try {
+    const response = await fetch("/api/me");
+    if (!response.ok) throw new Error("额度读取失败");
+    const data = await response.json();
+    updateQuotaBadge(data.quota);
+  } catch {
+    quotaBadge.textContent = "额度暂不可用";
+  }
+}
+
+function updateQuotaBadge(quota) {
+  if (!quotaBadge || !quota?.remaining || !quota?.limits) return;
+  const transcribeLeft = formatRemaining(quota.remaining.monthlyTranscribeMinutes, quota.limits.monthlyTranscribeMinutes, "分钟");
+  const analyzeLeft = formatRemaining(quota.remaining.monthlyAnalyzeCount, quota.limits.monthlyAnalyzeCount, "次分析");
+  quotaBadge.textContent = `${quota.user?.label || "内测用户"} · 转写 ${transcribeLeft} · ${analyzeLeft}`;
+}
+
+function formatRemaining(remainingValue, limitValue, unit) {
+  if (remainingValue === null || remainingValue === undefined) return `不限${unit}`;
+  return `${Math.max(0, Math.floor(remainingValue))}/${Math.floor(limitValue)} ${unit}`;
+}
+
+function safeParseJson(text) {
+  try {
+    return JSON.parse(text);
+  } catch {
+    return null;
+  }
 }
 
 function loadSettings() {
@@ -602,16 +635,21 @@ async function analyzeWithDeepSeek() {
         showToast("缺少 DeepSeek API Key");
         return;
       }
-      throw new Error(errorText || `HTTP ${response.status}`);
+      const parsedError = safeParseJson(errorText);
+      const error = new Error(parsedError?.error || errorText || `HTTP ${response.status}`);
+      error.quota = parsedError?.quota;
+      throw error;
     }
 
     const data = await response.json();
     const markdown = data.choices?.[0]?.message?.content?.trim();
     if (!markdown) throw new Error("DeepSeek 没有返回可用内容");
 
+    updateQuotaBadge(data.quota);
     setMarkdownOutput(markdown, "ai");
     showToast("DeepSeek 已生成笔记");
   } catch (error) {
+    updateQuotaBadge(error.quota);
     updatePipeline("error");
     showToast("DeepSeek 请求失败，Markdown 未更新");
     console.error(error);
@@ -724,14 +762,18 @@ async function generateTranscriptForActiveEpisode() {
 
     const data = await response.json();
     if (!response.ok || !data.transcript) {
-      throw new Error(data.error || "音频转写失败");
+      const error = new Error(data.error || "音频转写失败");
+      error.quota = data.quota;
+      throw error;
     }
 
     saveCachedTranscript(activeEpisode, data);
     recordTranscribeUsage(durationMinutes, data.provider || provider);
+    updateQuotaBadge(data.quota);
     applyTranscript(data.transcript, data);
     showToast("已生成 transcript");
   } catch (error) {
+    updateQuotaBadge(error.quota);
     const message = error.message || "音频转写失败";
     activeEpisode.transcriptStatus = message;
     updateTranscriptStatus(message);
@@ -1403,6 +1445,7 @@ audioPlayer.addEventListener("error", () => {
 });
 
 loadSettings();
+loadAccount();
 const initialRss = new URLSearchParams(window.location.search).get("rss");
 if (initialRss) {
   document.querySelector("#rssInput").value = initialRss;

@@ -1,5 +1,17 @@
 # 更新记录
 
+## 0.16.0 - 2026-05-18
+
+### 新增
+
+- 登录页从固定密码改为邀请码登录。
+- 新增 `PODNOTE_INVITE_CODES` 和 `PODNOTE_SESSION_SECRET` 环境变量。
+- 新增服务端用户额度：每月转写分钟数、每日转写分钟数、单集最长转写分钟数、每月 DeepSeek 分析次数、全站每日转写上限。
+- 新增 `/api/me`，前端会显示当前邀请码的剩余额度。
+- `/api/transcribe` 会在服务端检查和扣减转写额度，并把成功生成的 transcript 写入服务端缓存。
+- `/api/analyze` 会在服务端检查和扣减 DeepSeek 分析次数。
+- 新增 `PODNOTE_KV` 绑定约定，用 Cloudflare KV 持久化邀请码用户、额度记录和 transcript 缓存；本地开发没有 KV 时使用内存存储。
+
 ## 0.15.3 - 2026-05-18
 
 ### 文案

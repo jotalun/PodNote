@@ -1,6 +1,6 @@
 # 后续路线图
 
-版本：`0.15.3`  
+版本：`0.16.0`  
 更新日期：2026-05-18
 
 ## 最近要做
@@ -11,14 +11,18 @@
 
 已完成：
 
-- 临时访问密码页。
+- 邀请码登录页。
 - Cloudflare Pages 中间件保护页面和 API。
+- 用户级转写分钟额度。
+- 用户级 DeepSeek 分析次数额度。
+- 全站每日转写分钟数上限。
+- 服务端 transcript 缓存。
 
 优先方案：
 
 - Cloudflare Access。
-- 更强的自定义密码。
-- `/api/analyze` 请求限流。
+- Cloudflare Turnstile。
+- 更完整的后台邀请码管理。
 
 ### 2. Transcript 获取
 
@@ -31,6 +35,7 @@
 - 支持 25MB 以下音频用 OpenAI 生成 transcript。
 - 支持超过 25MB 的公开音频用 Deepgram URL 转写。
 - 浏览器端 transcript 缓存和每日 300 分钟转写保护。
+- Cloudflare KV 服务端 transcript 缓存和额度保护。
 - 播放时字幕自动同步高亮。
 - 播放器卡片内当前字幕显示。
 - 完整字幕时间线移入播放器卡片。
@@ -41,8 +46,7 @@
 
 优先方案：
 
-- Cloudflare KV 服务端 transcript 缓存。
-- Cloudflare KV 服务端每日额度保护。
+- D1 会员、订单和账单流水。
 - 音频切片转写，作为 Deepgram 不可用时的备用方案。
 - 本地 Whisper。
 - 支持上传音频文件。

@@ -3,9 +3,9 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="podnote-version" content="0.15.3" />
+    <meta name="podnote-version" content="0.16.0" />
     <title>PodNote</title>
-    <link rel="stylesheet" href="./styles.css?v=0.15.3" />
+    <link rel="stylesheet" href="./styles.css?v=0.16.0" />
   </head>
   <body>
     <div class="app-frame">
@@ -17,7 +17,10 @@
             <span>Podcast to Markdown</span>
           </div>
         </div>
-        <p>小宇宙 / RSS / 播客网页 → Transcript → Markdown</p>
+        <div class="account-bar">
+          <span id="quotaBadge">读取额度...</span>
+          <a href="/api/auth/logout">退出</a>
+        </div>
       </header>
 
       <section class="import-panel" aria-label="导入播客">
@@ -178,6 +181,6 @@
     </div>
 
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
-    <script src="./app.js?v=0.15.3"></script>
+    <script src="./app.js?v=0.16.0"></script>
   </body>
 </html>
