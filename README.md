@@ -2,7 +2,7 @@
 
 一个 transcript-first 的播客知识工作台：粘贴小宇宙、播客网页或 RSS，播放单集，获取 transcript，再用 DeepSeek 整理成 Markdown 笔记。
 
-当前版本：`0.16.2`
+当前版本：`0.17.0`
 
 ## 文档入口
 
@@ -32,15 +32,16 @@ http://127.0.0.1:4174/?rss=http%3A%2F%2F127.0.0.1%3A4174%2Ffixtures%2Fsample-fee
 ## 使用流程
 
 1. 输入邀请码进入页面。
-2. 在页面顶部粘贴小宇宙、播客网页或 RSS 链接并解析。
-3. 选择一集播放。
-4. 点击 `自动查找` 获取公开 transcript；没有的话点击 `生成 transcript`。
-5. 点击 `DeepSeek 分析`。
-6. 下载 `.md` 文件。
+2. 可以先打开顶部的 `内测说明` 看完整流程，或打开 `配置检查` 确认 API 和额度配置。
+3. 在页面顶部粘贴小宇宙、播客网页或 RSS 链接并解析。
+4. 选择一集播放。
+5. 点击 `自动查找` 获取公开 transcript；没有的话点击 `生成 transcript`。
+6. 点击 `DeepSeek 分析`。
+7. 下载 `.md` 文件。
 
 ## 当前架构
 
-- `server.js`：本地静态服务、邀请码登录、额度保护、DeepSeek 代理、播客网页/RSS 抓取、transcript 查找、OpenAI 短音频转写和 Deepgram 长音频转写。
+- `server.js`：本地静态服务、邀请码登录、额度保护、配置检查、DeepSeek 代理、播客网页/RSS 抓取、transcript 查找、OpenAI 短音频转写和 Deepgram 长音频转写。
 - `lib/metering.js`：邀请码、用户额度、服务端 transcript 缓存和用量记录。
 - `index.html`：产品界面。
 - `app.js`：RSS 导入、播放器、transcript、笔记生成和导出交互。

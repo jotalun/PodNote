@@ -1,6 +1,6 @@
 # Cloudflare 部署说明
 
-版本：`0.16.2`  
+版本：`0.17.0`
 更新日期：2026-05-18
 
 ## 线上版能做什么
@@ -12,6 +12,7 @@ Cloudflare 线上版支持：
 - 通过 `/api/transcript` 查找公开 transcript。
 - 通过 `/api/transcribe` 调用 OpenAI 或 Deepgram 生成 transcript。
 - 通过 `/api/analyze` 调用 DeepSeek。
+- 通过 `/api/config` 检查线上配置状态。
 - 生成和下载 Markdown。
 - 用邀请码保护未完善的预览版本。
 - 用 Cloudflare KV 记录用户额度和 transcript 缓存。
@@ -286,6 +287,22 @@ Root directory: /
 线上版不需要在页面里填写 API Key；Cloudflare Function 会读取 `DEEPSEEK_API_KEY`、`OPENAI_API_KEY` 和 `DEEPGRAM_API_KEY`。
 
 注意：25MB 以下音频会走 OpenAI；超过 25MB 的公开音频会走 Deepgram URL 转写。服务端会优先检查 KV transcript 缓存，命中缓存时不再重复调用转写服务。
+
+## 配置检查页
+
+登录后，点击顶部 `配置检查` 可以查看当前部署是否完成关键配置。
+
+它会检查：
+
+- 邀请码或临时内测码。
+- `PODNOTE_SESSION_SECRET`。
+- `PODNOTE_KV`。
+- `DEEPSEEK_API_KEY`。
+- `OPENAI_API_KEY`。
+- `DEEPGRAM_API_KEY`。
+- `PODNOTE_GLOBAL_DAILY_COST_USD` 等额度保护。
+
+这个页面只显示状态，不会显示任何 Key 原文。它适合每次改 Cloudflare 环境变量或重新部署后快速确认。
 
 ## 访问保护
 

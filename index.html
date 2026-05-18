@@ -3,9 +3,9 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="podnote-version" content="0.16.2" />
+    <meta name="podnote-version" content="0.17.0" />
     <title>PodNote</title>
-    <link rel="stylesheet" href="./styles.css?v=0.16.2" />
+    <link rel="stylesheet" href="./styles.css?v=0.17.0" />
   </head>
   <body>
     <div class="app-frame">
@@ -19,6 +19,8 @@
         </div>
         <div class="account-bar">
           <span id="quotaBadge">读取额度...</span>
+          <button class="nav-button" id="guideButton" type="button">内测说明</button>
+          <button class="nav-button" id="configButton" type="button">配置检查</button>
           <a href="/api/auth/logout">退出</a>
         </div>
       </header>
@@ -162,6 +164,58 @@
       </main>
     </div>
 
+    <section class="modal-backdrop" id="guideModal" aria-label="内测说明" hidden>
+      <div class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="guideTitle">
+        <div class="modal-header">
+          <div>
+            <p class="eyebrow">Beta Guide</p>
+            <h2 id="guideTitle">内测说明</h2>
+          </div>
+          <button class="icon-close" type="button" data-close-modal="guideModal" aria-label="关闭">×</button>
+        </div>
+        <div class="guide-grid">
+          <section>
+            <h3>你可以怎么用</h3>
+            <ol>
+              <li>粘贴小宇宙、RSS 或播客网页链接。</li>
+              <li>选择一集，先自动查找公开 transcript。</li>
+              <li>没有公开文字稿时，再点击生成 transcript。</li>
+              <li>确认 transcript 后，点击 DeepSeek 分析。</li>
+              <li>下载 Markdown，放进 Obsidian。</li>
+            </ol>
+          </section>
+          <section>
+            <h3>额度是什么意思</h3>
+            <p>生成 transcript 会消耗转写分钟数。命中服务端缓存时不会重复转写，也不会再次消耗转写费用。DeepSeek 分析按次数限制。</p>
+          </section>
+          <section>
+            <h3>内测注意</h3>
+            <p>请先用公开播客测试，不要处理敏感、私密或付费内容。当前版本可能会遇到转写超时、链接解析失败或笔记质量不稳定的情况。</p>
+          </section>
+        </div>
+      </div>
+    </section>
+
+    <section class="modal-backdrop" id="configModal" aria-label="配置检查" hidden>
+      <div class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="configTitle">
+        <div class="modal-header">
+          <div>
+            <p class="eyebrow">Setup Check</p>
+            <h2 id="configTitle">配置检查</h2>
+          </div>
+          <button class="icon-close" type="button" data-close-modal="configModal" aria-label="关闭">×</button>
+        </div>
+        <p class="modal-copy">这里只检查是否配置完成，不会显示任何 API Key 或密钥原文。</p>
+        <div class="config-list" id="configStatusList">
+          <p class="muted-line">点击刷新检查当前部署配置。</p>
+        </div>
+        <div class="config-summary" id="configSummary"></div>
+        <div class="modal-actions">
+          <button class="secondary-button" id="refreshConfigButton" type="button">刷新检查</button>
+        </div>
+      </div>
+    </section>
+
     <div class="hidden-settings" aria-hidden="true">
       <h2 id="episodeTitle">PodNote</h2>
       <input id="apiKeyInput" type="hidden" />
@@ -181,6 +235,6 @@
     </div>
 
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
-    <script src="./app.js?v=0.16.2"></script>
+    <script src="./app.js?v=0.17.0"></script>
   </body>
 </html>

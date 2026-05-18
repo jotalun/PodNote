@@ -96,6 +96,11 @@ const audioStatus = document.querySelector("#audioStatus");
 const captionTime = document.querySelector("#captionTime");
 const captionText = document.querySelector("#captionText");
 const quotaBadge = document.querySelector("#quotaBadge");
+const guideButton = document.querySelector("#guideButton");
+const configButton = document.querySelector("#configButton");
+const refreshConfigButton = document.querySelector("#refreshConfigButton");
+const configStatusList = document.querySelector("#configStatusList");
+const configSummary = document.querySelector("#configSummary");
 let activeTranscriptIndex = -1;
 
 function renderEpisodes(items = episodes) {
@@ -360,6 +365,106 @@ function safeParseJson(text) {
   } catch {
     return null;
   }
+}
+
+function openModal(id) {
+  const modal = document.querySelector(`#${id}`);
+  if (!modal) return;
+  modal.hidden = false;
+}
+
+function closeModal(id) {
+  const modal = document.querySelector(`#${id}`);
+  if (!modal) return;
+  modal.hidden = true;
+}
+
+function closeAllModals() {
+  document.querySelectorAll(".modal-backdrop").forEach((modal) => {
+    modal.hidden = true;
+  });
+}
+
+async function loadConfigStatus() {
+  if (!configStatusList || !configSummary) return;
+  configStatusList.replaceChildren(createMutedLine("正在检查当前部署配置..."));
+  configSummary.textContent = "";
+
+  try {
+    const response = await fetch("/api/config");
+    const data = await response.json();
+    if (!response.ok || !data.ok) throw new Error(data.error || "配置检查失败");
+    renderConfigStatus(data);
+  } catch (error) {
+    configStatusList.replaceChildren(createMutedLine(error.message || "配置检查失败，请稍后再试。"));
+    configSummary.textContent = "";
+  }
+}
+
+function renderConfigStatus(data) {
+  const checks = Array.isArray(data.checks) ? data.checks : [];
+  if (!checks.length) {
+    configStatusList.replaceChildren(createMutedLine("没有拿到配置检查结果。"));
+    return;
+  }
+
+  configStatusList.replaceChildren(...checks.map(createConfigItem));
+  const limits = data.limits || {};
+  const checkedAt = data.checkedAt ? new Date(data.checkedAt).toLocaleString("zh-CN") : "刚刚";
+  configSummary.textContent = [
+    `默认额度：每月转写 ${formatConfigLimit(limits.monthlyTranscribeMinutes, "分钟")}，每日转写 ${formatConfigLimit(limits.dailyTranscribeMinutes, "分钟")}，单集 ${formatConfigLimit(limits.maxSingleTranscribeMinutes, "分钟")}，每月分析 ${formatConfigLimit(limits.monthlyAnalyzeCount, "次")}。`,
+    `全站保护：每日转写 ${formatConfigLimit(limits.globalDailyTranscribeMinutes, "分钟")}，每日预算 ${formatCurrencyLimit(limits.globalDailyCostUsd)}。`,
+    `检查时间：${checkedAt}。`
+  ].join(" ");
+}
+
+function createConfigItem(check) {
+  const item = document.createElement("article");
+  const status = normalizeConfigStatus(check.status);
+  item.className = "config-item";
+
+  const label = document.createElement("strong");
+  label.textContent = check.label || "配置项";
+
+  const detail = document.createElement("p");
+  detail.textContent = check.detail || "";
+
+  const pill = document.createElement("span");
+  pill.className = `config-pill ${status}`;
+  pill.textContent = configStatusLabel(status);
+
+  item.append(label, detail, pill);
+  return item;
+}
+
+function createMutedLine(text) {
+  const line = document.createElement("p");
+  line.className = "muted-line";
+  line.textContent = text;
+  return line;
+}
+
+function normalizeConfigStatus(status) {
+  return ["ok", "warning", "missing"].includes(status) ? status : "warning";
+}
+
+function configStatusLabel(status) {
+  const labels = {
+    ok: "正常",
+    warning: "注意",
+    missing: "缺失"
+  };
+  return labels[status] || labels.warning;
+}
+
+function formatConfigLimit(value, unit) {
+  const number = Number(value || 0);
+  return number > 0 ? `${number} ${unit}` : "不限";
+}
+
+function formatCurrencyLimit(value) {
+  const number = Number(value || 0);
+  return number > 0 ? `$${number}/天` : "未设置";
 }
 
 function loadSettings() {
@@ -1266,6 +1371,27 @@ function hashString(value) {
   }
   return Math.abs(hash).toString(36);
 }
+
+guideButton?.addEventListener("click", () => openModal("guideModal"));
+configButton?.addEventListener("click", () => {
+  openModal("configModal");
+  loadConfigStatus();
+});
+refreshConfigButton?.addEventListener("click", loadConfigStatus);
+
+document.querySelectorAll("[data-close-modal]").forEach((button) => {
+  button.addEventListener("click", () => closeModal(button.dataset.closeModal));
+});
+
+document.querySelectorAll(".modal-backdrop").forEach((modal) => {
+  modal.addEventListener("click", (event) => {
+    if (event.target === modal) closeModal(modal.id);
+  });
+});
+
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape") closeAllModals();
+});
 
 episodeList.addEventListener("click", (event) => {
   const card = event.target.closest(".episode-card");

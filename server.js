@@ -13,6 +13,7 @@ import {
 import {
   commitAnalyzeUsage,
   commitTranscribeUsage,
+  getConfigSnapshot,
   getQuotaSnapshot,
   guardAnalyzeQuota,
   guardTranscribeQuota,
@@ -78,6 +79,11 @@ createServer(async (request, response) => {
 
     if (request.method === "GET" && url.pathname === "/api/me") {
       await handleMe(response, session);
+      return;
+    }
+
+    if (request.method === "GET" && url.pathname === "/api/config") {
+      handleConfig(response);
       return;
     }
 
@@ -300,6 +306,10 @@ async function handleTranscribe(request, response, session) {
 async function handleMe(response, session) {
   const quota = await getQuotaSnapshot(process.env, session);
   sendJson(response, 200, { ok: true, user: quota.user, quota });
+}
+
+function handleConfig(response) {
+  sendJson(response, 200, getConfigSnapshot(process.env));
 }
 
 async function handleExport(request, response) {
