@@ -3,11 +3,12 @@ import { transcribeAudio } from "../../lib/transcribe.js";
 export async function onRequestPost({ request, env }) {
   const body = await request.json().catch(() => ({}));
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 120000);
+  const timeout = setTimeout(() => controller.abort(), 540000);
 
   try {
     const result = await transcribeAudio(body, {
-      apiKey: env.OPENAI_API_KEY,
+      openAiApiKey: env.OPENAI_API_KEY,
+      deepgramApiKey: env.DEEPGRAM_API_KEY,
       signal: controller.signal
     });
     return sendJson(result);
@@ -20,7 +21,8 @@ export async function onRequestPost({ request, env }) {
         error: message,
         setupRequired: Boolean(error.setupRequired),
         contentLength: error.contentLength,
-        maxBytes: error.maxBytes
+        maxBytes: error.maxBytes,
+        provider: error.provider
       },
       status
     );

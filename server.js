@@ -224,11 +224,12 @@ async function handleTranscript(url, response) {
 async function handleTranscribe(request, response) {
   const body = await readJson(request);
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 120000);
+  const timeout = setTimeout(() => controller.abort(), 540000);
 
   try {
     const result = await transcribeAudio(body, {
-      apiKey: body.apiKey || process.env.OPENAI_API_KEY,
+      openAiApiKey: body.apiKey || process.env.OPENAI_API_KEY,
+      deepgramApiKey: body.deepgramApiKey || process.env.DEEPGRAM_API_KEY,
       signal: controller.signal
     });
     sendJson(response, 200, result);
@@ -240,7 +241,8 @@ async function handleTranscribe(request, response) {
       error: message,
       setupRequired: Boolean(error.setupRequired),
       contentLength: error.contentLength,
-      maxBytes: error.maxBytes
+      maxBytes: error.maxBytes,
+      provider: error.provider
     });
   } finally {
     clearTimeout(timeout);

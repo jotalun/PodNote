@@ -2,7 +2,7 @@
 
 一个 transcript-first 的播客知识工作台：粘贴小宇宙、播客网页或 RSS，播放单集，获取 transcript，再用 DeepSeek 整理成 Markdown 笔记。
 
-当前版本：`0.10.0`
+当前版本：`0.11.0`
 
 ## 文档入口
 
@@ -48,7 +48,7 @@ http://127.0.0.1:4174/?rss=http%3A%2F%2F127.0.0.1%3A4174%2Ffixtures%2Fsample-fee
 ## 下一步
 
 - 部署到 Cloudflare Pages 并设置 `DEEPSEEK_API_KEY` secret。
-- 给长音频增加切片转写，突破 OpenAI 单次 25MB 上传限制。
+- 接入 Cloudflare KV，把 transcript 缓存和每日额度保护放到服务端。
 - 后续把默认密码改成更强的环境变量密码，避免公开网站消耗 API 额度。
 - 用 Electron 或 Tauri 打包成真正桌面 App。
 

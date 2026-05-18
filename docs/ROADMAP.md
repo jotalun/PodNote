@@ -1,6 +1,6 @@
 # 后续路线图
 
-版本：`0.10.0`  
+版本：`0.11.0`  
 更新日期：2026-05-18
 
 ## 最近要做
@@ -29,11 +29,14 @@
 - 自动读取 RSS 里的公开 transcript。
 - 自动发现单集网页里的 transcript / 字幕链接。
 - 支持 25MB 以下音频用 OpenAI 生成 transcript。
+- 支持超过 25MB 的公开音频用 Deepgram URL 转写。
+- 浏览器端 transcript 缓存和每日 300 分钟转写保护。
 
 优先方案：
 
-- 音频切片转写，支持长播客。
-- Deepgram 这类支持 URL 转写的服务。
+- Cloudflare KV 服务端 transcript 缓存。
+- Cloudflare KV 服务端每日额度保护。
+- 音频切片转写，作为 Deepgram 不可用时的备用方案。
 - 本地 Whisper。
 - 支持上传音频文件。
 

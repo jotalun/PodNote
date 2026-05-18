@@ -1,6 +1,6 @@
 # Cloudflare 部署说明
 
-版本：`0.10.0`  
+版本：`0.11.0`  
 更新日期：2026-05-18
 
 ## 线上版能做什么
@@ -10,7 +10,7 @@ Cloudflare 线上版支持：
 - 打开网页界面。
 - 通过 `/api/rss` 抓取 RSS、从播客网页自动发现 RSS，或导入小宇宙公开页面。
 - 通过 `/api/transcript` 查找公开 transcript。
-- 通过 `/api/transcribe` 调用 OpenAI 生成 transcript。
+- 通过 `/api/transcribe` 调用 OpenAI 或 Deepgram 生成 transcript。
 - 通过 `/api/analyze` 调用 DeepSeek。
 - 生成和下载 Markdown。
 - 用访问密码保护未完善的预览版本。
@@ -24,6 +24,7 @@ Cloudflare 线上版不支持直接写入你电脑里的 Obsidian Vault。当前
 - Cloudflare 账号。
 - DeepSeek API Key。
 - OpenAI API Key，用于没有公开 transcript 时生成文字稿。
+- Deepgram API Key，用于小宇宙等长音频 URL 转写。
 - 访问密码，默认是 `123456`。
 - 本机可以运行 `npx wrangler`。
 
@@ -109,6 +110,30 @@ OPENAI_API_KEY
 
 ```bash
 npx wrangler pages secret put OPENAI_API_KEY --project-name podnote-desktop
+```
+
+设置后重新部署一次。
+
+## 设置 Deepgram API Key
+
+进入 Cloudflare Dashboard：
+
+```text
+Workers & Pages → podnote-desktop → Settings → Environment variables
+```
+
+添加变量：
+
+```text
+DEEPGRAM_API_KEY
+```
+
+类型设为 Secret，值填你的 Deepgram API Key。
+
+也可以用 Wrangler 设置：
+
+```bash
+npx wrangler pages secret put DEEPGRAM_API_KEY --project-name podnote-desktop
 ```
 
 设置后重新部署一次。
@@ -203,9 +228,9 @@ Root directory: /
 5. 点击 `DeepSeek 分析`。
 6. 下载 Markdown。
 
-线上版不需要在页面里填写 API Key；Cloudflare Function 会读取 `DEEPSEEK_API_KEY` 和 `OPENAI_API_KEY`。
+线上版不需要在页面里填写 API Key；Cloudflare Function 会读取 `DEEPSEEK_API_KEY`、`OPENAI_API_KEY` 和 `DEEPGRAM_API_KEY`。
 
-注意：OpenAI 文件转写接口单次上传限制为 25MB。当前版本会在音频超过限制时提示需要切片或改接支持 URL 转写的服务。
+注意：25MB 以下音频会走 OpenAI；超过 25MB 的公开音频会走 Deepgram URL 转写。浏览器本地会缓存已生成 transcript，避免同一单集重复扣费。
 
 ## 访问保护
 
@@ -228,4 +253,4 @@ Root directory: /
 | 下载 Markdown | 支持 | 支持 |
 | 写入本机 Obsidian Vault | 暂不作为主流程 | 不支持 |
 | API Key 存放 | 本机环境变量或页面输入 | Cloudflare Secret |
-| 生成 transcript | 支持 25MB 以下音频 | 支持 25MB 以下音频 |
+| 生成 transcript | OpenAI 短音频 + Deepgram 长音频 | OpenAI 短音频 + Deepgram 长音频 |

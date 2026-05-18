@@ -69,6 +69,11 @@ let savedSettings = {};
 let pendingTranscribeConfirmation = false;
 let pendingTranscribeTimer = 0;
 const maxTranscribeBytes = 25 * 1024 * 1024;
+const openAiTranscribeCostPerMinuteUsd = 0.003;
+const deepgramTranscribeCostPerMinuteUsd = 0.0043;
+const dailyTranscribeLimitMinutes = 300;
+const transcriptCachePrefix = "podnote-transcript-cache:";
+const transcribeUsageKey = "podnote-transcribe-usage";
 
 const episodeList = document.querySelector("#episodeList");
 const transcriptEl = document.querySelector("#transcript");
@@ -173,15 +178,14 @@ function updateTranscriptStatus(message = "") {
     return;
   }
 
-  const estimate = estimateTranscriptionCost(activeEpisode.duration);
-  const limitText = isAudioOverTranscribeLimit(activeEpisode)
-    ? `这集音频约 ${formatBytes(activeEpisode.audioBytes)}，超过当前 25MB 转写上限。`
-    : "";
-  const costText = estimate && !limitText ? ` 生成 transcript 预计约 $${estimate}。` : "";
+  const provider = transcribeProviderForEpisode(activeEpisode);
+  const estimate = estimateTranscriptionCost(activeEpisode.duration, provider);
+  const cached = loadCachedTranscript(activeEpisode);
+  const cacheText = cached ? " 本地已有 transcript 缓存，点击生成会直接载入。" : "";
+  const providerText = provider === "deepgram" ? "长音频会走 Deepgram URL 转写。" : "短音频会走 OpenAI 转写。";
+  const costText = estimate ? ` ${providerText} 预计约 $${estimate}。` : ` ${providerText}`;
   transcriptStatus.textContent = activeEpisode.transcriptStatus || `这期还没有 transcript。可以先自动查找公开文字稿；没有的话再生成。${costText}`;
-  if (limitText) {
-    transcriptStatus.textContent = activeEpisode.transcriptStatus || `这期还没有 transcript。可以先自动查找公开文字稿。${limitText}`;
-  }
+  if (cacheText) transcriptStatus.textContent += cacheText;
 }
 
 function setCoverBackground(element, episode) {
@@ -347,10 +351,11 @@ function secondsToTimestamp(totalSeconds) {
   return `${String(mins).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
 }
 
-function estimateTranscriptionCost(duration) {
+function estimateTranscriptionCost(duration, provider = "openai") {
   const seconds = parseTimeToSeconds(duration);
   if (!seconds) return "";
-  return ((seconds / 60) * 0.003).toFixed(2);
+  const rate = provider === "deepgram" ? deepgramTranscribeCostPerMinuteUsd : openAiTranscribeCostPerMinuteUsd;
+  return ((seconds / 60) * rate).toFixed(2);
 }
 
 function showToast(message) {
@@ -530,20 +535,34 @@ async function generateTranscriptForActiveEpisode() {
     return;
   }
 
-  if (isAudioOverTranscribeLimit(activeEpisode)) {
-    const message = `这集音频约 ${formatBytes(activeEpisode.audioBytes)}，超过当前 25MB 转写上限。下一步需要做音频切片转写，或接入 Deepgram 这类支持长音频 URL 的服务。`;
-    activeEpisode.transcriptStatus = message;
-    updateTranscriptStatus(message);
-    showToast("音频太大，暂时不能直接转写");
+  const cached = loadCachedTranscript(activeEpisode);
+  if (cached?.transcript) {
+    applyTranscript(cached.transcript, {
+      sourceType: cached.sourceType || "cache-transcript",
+      provider: cached.provider || "cache"
+    });
+    showToast("已从本地缓存载入 transcript");
     return;
   }
 
-  const estimate = estimateTranscriptionCost(activeEpisode.duration);
-  const costText = estimate ? `预计费用约 $${estimate}。` : "会产生 OpenAI 转写费用。";
+  const provider = transcribeProviderForEpisode(activeEpisode);
+  const durationMinutes = Math.ceil(parseTimeToSeconds(activeEpisode.duration) / 60);
+  if (wouldExceedDailyTranscribeLimit(durationMinutes)) {
+    const used = getTodayTranscribeUsage().minutes;
+    const message = `今天已转写约 ${used} 分钟，默认上限 ${dailyTranscribeLimitMinutes} 分钟。为了控制成本，今天先暂停生成。`;
+    updateTranscriptStatus(message);
+    showToast("已达到今日转写保护额度");
+    return;
+  }
+
+  const estimate = estimateTranscriptionCost(activeEpisode.duration, provider);
+  const providerName = transcribeProviderName(provider);
+  const costText = estimate ? `预计费用约 $${estimate}。` : "会产生转写费用。";
   if (!pendingTranscribeConfirmation) {
     pendingTranscribeConfirmation = true;
     generateTranscriptButton.textContent = estimate ? `确认生成 $${estimate}` : "确认生成";
-    updateTranscriptStatus(`将调用 OpenAI 生成 transcript，${costText} 当前版本只支持 25MB 以下音频。再次点击确认。`);
+    const sizeText = activeEpisode.audioBytes ? `音频约 ${formatBytes(activeEpisode.audioBytes)}。` : "";
+    updateTranscriptStatus(`将调用 ${providerName} 生成 transcript，${sizeText}${costText} 再次点击确认。`);
     showToast("再次点击确认生成 transcript");
     window.clearTimeout(pendingTranscribeTimer);
     pendingTranscribeTimer = window.setTimeout(resetTranscribeConfirmation, 9000);
@@ -554,7 +573,7 @@ async function generateTranscriptForActiveEpisode() {
 
   generateTranscriptButton.disabled = true;
   generateTranscriptButton.textContent = "生成中";
-  updateTranscriptStatus("正在下载音频并调用 OpenAI 转写，可能需要几十秒...");
+  updateTranscriptStatus(`正在调用 ${providerName} 转写，可能需要几十秒到几分钟...`);
 
   try {
     const response = await fetch("/api/transcribe", {
@@ -564,9 +583,13 @@ async function generateTranscriptForActiveEpisode() {
       },
       body: JSON.stringify({
         audioUrl: activeEpisode.audioUrl,
+        audioBytes: activeEpisode.audioBytes,
         title: activeEpisode.title,
         duration: activeEpisode.duration,
-        model: "gpt-4o-mini-transcribe"
+        provider,
+        model: "gpt-4o-mini-transcribe",
+        deepgramModel: "nova-3",
+        language: "zh"
       })
     });
 
@@ -575,6 +598,8 @@ async function generateTranscriptForActiveEpisode() {
       throw new Error(data.error || "音频转写失败");
     }
 
+    saveCachedTranscript(activeEpisode, data);
+    recordTranscribeUsage(durationMinutes, data.provider || provider);
     applyTranscript(data.transcript, data);
     showToast("已生成 transcript");
   } catch (error) {
@@ -618,7 +643,9 @@ function transcriptSourceLabel(sourceType = "") {
     "rss-inline-transcript": " RSS 内嵌文字稿",
     "episode-page": "单集网页",
     "episode-page-link": "单集网页链接",
-    "openai-transcribe": " OpenAI 转写"
+    "openai-transcribe": " OpenAI 转写",
+    "deepgram-transcribe": " Deepgram 转写",
+    "cache-transcript": "本地缓存"
   };
   return labels[sourceType] || "公开来源";
 }
@@ -769,10 +796,81 @@ function isAudioOverTranscribeLimit(episode) {
   return Number(episode.audioBytes || 0) > maxTranscribeBytes;
 }
 
+function transcribeProviderForEpisode(episode) {
+  return isAudioOverTranscribeLimit(episode) ? "deepgram" : "openai";
+}
+
+function transcribeProviderName(provider) {
+  return provider === "deepgram" ? "Deepgram" : "OpenAI";
+}
+
 function formatBytes(bytes) {
   const value = Number(bytes || 0);
   if (!value) return "未知大小";
   return `${(value / 1024 / 1024).toFixed(1)}MB`;
+}
+
+function loadCachedTranscript(episode) {
+  try {
+    return JSON.parse(localStorage.getItem(transcriptCacheKey(episode)) || "null");
+  } catch {
+    return null;
+  }
+}
+
+function saveCachedTranscript(episode, data) {
+  if (!data?.transcript) return;
+  const payload = {
+    transcript: data.transcript,
+    provider: data.provider || "",
+    sourceType: data.sourceType || "cache-transcript",
+    model: data.model || "",
+    savedAt: new Date().toISOString()
+  };
+
+  try {
+    localStorage.setItem(transcriptCacheKey(episode), JSON.stringify(payload));
+  } catch {
+    showToast("transcript 已生成，但本地缓存空间不足");
+  }
+}
+
+function transcriptCacheKey(episode) {
+  return `${transcriptCachePrefix}${hashString(`${episode.audioUrl || ""}-${episode.title || ""}-${episode.duration || ""}`)}`;
+}
+
+function getTodayTranscribeUsage() {
+  const today = new Date().toISOString().slice(0, 10);
+  try {
+    const usage = JSON.parse(localStorage.getItem(transcribeUsageKey) || "{}");
+    if (usage.date === today) return { date: today, minutes: Number(usage.minutes || 0) };
+  } catch {
+    // Reset malformed usage data.
+  }
+
+  return { date: today, minutes: 0 };
+}
+
+function wouldExceedDailyTranscribeLimit(minutes) {
+  if (!minutes) return false;
+  const usage = getTodayTranscribeUsage();
+  return usage.minutes + minutes > dailyTranscribeLimitMinutes;
+}
+
+function recordTranscribeUsage(minutes, provider) {
+  if (!minutes) return;
+  const usage = getTodayTranscribeUsage();
+  const nextUsage = {
+    date: usage.date,
+    minutes: usage.minutes + minutes,
+    provider,
+    updatedAt: new Date().toISOString()
+  };
+  try {
+    localStorage.setItem(transcribeUsageKey, JSON.stringify(nextUsage));
+  } catch {
+    // Usage protection is best-effort in the browser.
+  }
 }
 
 function readChaptersFromDescription(desc) {

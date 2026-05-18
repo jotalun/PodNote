@@ -1,6 +1,6 @@
 # PodNote Desktop 产品说明
 
-版本：`0.10.0`  
+版本：`0.11.0`  
 更新日期：2026-05-18
 
 ## 产品定位
@@ -44,7 +44,7 @@ PodNote 是一个面向播客重度用户的知识整理工具。它把小宇宙
 主流程被压缩成三步：
 
 1. 粘贴小宇宙、播客网页或 RSS 链接并解析。
-2. 自动查找公开 transcript；没有的话用 OpenAI 生成 transcript。
+2. 自动查找公开 transcript；没有的话用 OpenAI 或 Deepgram 生成 transcript。
 3. 下载 Markdown。
 
 ### 2. 视觉风格
@@ -100,16 +100,20 @@ https://www.xiaoyuzhoufm.com/podcast/5e4ee557418a84a0466737b7
 
 当前实现：
 
-- 使用 OpenAI `gpt-4o-mini-transcribe`。
+- 25MB 以下音频使用 OpenAI `gpt-4o-mini-transcribe`。
+- 超过 25MB 的公开音频使用 Deepgram `nova-3` URL 转写。
 - 调用前需要两步确认，第一次点击会显示按时长估算的费用，第二次点击才会真正开始转写。
+- 生成前会显示转写服务商、音频大小和预估费用。
+- 同一浏览器里生成过的 transcript 会缓存，重复点击会直接载入缓存，避免重复扣费。
+- 浏览器端有默认每日 300 分钟转写保护，防止误触连续转写。
 - 结果会自动填入 transcript 输入区，并刷新字幕预览和 Markdown 草稿。
-- OpenAI API Key 只放在后端环境变量 `OPENAI_API_KEY`，不在页面暴露。
+- OpenAI API Key 和 Deepgram API Key 只放在后端环境变量，不在页面暴露。
 
 当前限制：
 
-- OpenAI 文件转写接口单次上传限制为 25MB，所以这一版只直接支持 25MB 以下音频。
-- 如果 RSS 或小宇宙页面提供了音频大小，页面会提前判断是否超过 25MB，并提示需要切片转写或长音频服务。
-- 很多长播客会超过 25MB，后续需要增加音频切片转写，或接 Deepgram 这类支持 URL 转写的服务。
+- Deepgram 当前默认语言为中文 `zh`，主要面向中文播客。
+- 当前缓存和每日额度是浏览器端保护；如果把网站开放给别人用，后续需要接 Cloudflare KV 做服务端缓存和限额。
+- 付费或私密音频不会被转写。
 
 ### 7. 中文字幕与时间线
 
@@ -176,7 +180,7 @@ DeepSeek 会生成适合 Obsidian 的 Markdown，包含：
 - 抓取播客网页并自动发现 RSS。
 - 抓取 RSS。
 - 查找公开 transcript。
-- 调用 OpenAI 生成 transcript。
+- 调用 OpenAI 或 Deepgram 生成 transcript。
 - 代理 DeepSeek 请求。
 - 提供本地开发时的静态服务和 API 代理。
 - 提供健康检查接口 `/api/health`。
@@ -193,7 +197,8 @@ DeepSeek 会生成适合 Obsidian 的 Markdown，包含：
 - 小宇宙公开页面导入。
 - RSS 抓取。
 - 公开 transcript 查找。
-- OpenAI 音频转写。
+- OpenAI 短音频转写。
+- Deepgram 长音频 URL 转写。
 - DeepSeek 分析。
 - Markdown 下载。
 
@@ -237,7 +242,7 @@ http://127.0.0.1:4174/?rss=http%3A%2F%2F127.0.0.1%3A4174%2Ffixtures%2Fsample-fee
 
 如果你已经导入播客，可以先点 `自动查找`。
 
-如果节目 RSS 或网页公开了 transcript，系统会自动填入。没有公开 transcript 时，可以点 `生成 transcript` 调 OpenAI 转写；如果音频太大或暂时不想付费，也可以在 `Transcript` 输入区手动粘贴完整转写文本。
+如果节目 RSS 或网页公开了 transcript，系统会自动填入。没有公开 transcript 时，可以点 `生成 transcript`。短音频会走 OpenAI，长音频会走 Deepgram；如果暂时不想付费，也可以在 `Transcript` 输入区手动粘贴完整转写文本。
 
 建议格式：
 
@@ -262,10 +267,10 @@ http://127.0.0.1:4174/?rss=http%3A%2F%2F127.0.0.1%3A4174%2Ffixtures%2Fsample-fee
 ## 当前限制
 
 - OPML 暂时不在主界面显示。
-- `生成 transcript` 当前只支持 25MB 以下音频。
+- `生成 transcript` 的长音频能力依赖 `DEEPGRAM_API_KEY`。
 - 长音频还没有做切片转写。
 - 线上版依赖 Cloudflare 环境变量 `DEEPSEEK_API_KEY`。
-- 线上版生成 transcript 依赖 Cloudflare 环境变量 `OPENAI_API_KEY`。
+- 线上版生成 transcript 依赖 Cloudflare 环境变量 `OPENAI_API_KEY` 和 `DEEPGRAM_API_KEY`。
 - 还没有打包成真正的 Mac/Windows 桌面 App。
 
 ## 推荐使用方式
@@ -278,7 +283,7 @@ http://127.0.0.1:4174/?rss=http%3A%2F%2F127.0.0.1%3A4174%2Ffixtures%2Fsample-fee
 4. 点击 `自动查找`。
 5. 如果没有公开 transcript，再点击 `生成 transcript`。
 6. 确认 Cloudflare 已经配置 `DEEPSEEK_API_KEY`。
-7. 确认 Cloudflare 已经配置 `OPENAI_API_KEY`。
+7. 确认 Cloudflare 已经配置 `OPENAI_API_KEY` 和 `DEEPGRAM_API_KEY`。
 8. 点击 `DeepSeek 分析`。
 9. 检查生成的 Markdown。
 10. 下载 Markdown 文件并放入 Obsidian。
