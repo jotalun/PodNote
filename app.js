@@ -80,6 +80,10 @@ const transcriptEl = document.querySelector("#transcript");
 const chaptersEl = document.querySelector("#chapters");
 const rawTranscript = document.querySelector("#rawTranscript");
 const noteOutput = document.querySelector("#noteOutput");
+const markdownStatus = document.querySelector("#markdownStatus");
+const copyButton = document.querySelector("#copyButton");
+const downloadButton = document.querySelector("#downloadButton");
+const exportButton = document.querySelector("#exportButton");
 const toast = document.querySelector("#toast");
 const analysisStatus = document.querySelector("#analysisStatus");
 const deepseekButton = document.querySelector("#deepseekButton");
@@ -143,8 +147,52 @@ function renderEpisode() {
     .join("");
 
   setupAudioForEpisode(activeEpisode);
-  generateNote();
+  restoreEpisodeMarkdown();
   renderEpisodes();
+}
+
+function restoreEpisodeMarkdown() {
+  const markdown = activeEpisode.markdown || "";
+  noteOutput.value = markdown;
+  noteOutput.readOnly = !markdown.trim();
+  updateMarkdownControls();
+  updatePipeline(markdown.trim() ? activeEpisode.markdownState || "ai" : "idle");
+}
+
+function setMarkdownOutput(markdown, state = "ai") {
+  activeEpisode.markdown = markdown;
+  activeEpisode.markdownState = state;
+  noteOutput.value = markdown;
+  noteOutput.readOnly = false;
+  updateMarkdownControls();
+  updatePipeline(state);
+}
+
+function clearMarkdownOutput(message = "") {
+  activeEpisode.markdown = "";
+  activeEpisode.markdownState = "idle";
+  noteOutput.value = "";
+  noteOutput.readOnly = true;
+  updateMarkdownControls(message);
+  updatePipeline("idle");
+}
+
+function updateMarkdownControls(message = "") {
+  const hasMarkdown = Boolean(noteOutput.value.trim());
+  noteOutput.classList.toggle("empty", !hasMarkdown);
+  noteOutput.readOnly = !hasMarkdown;
+  copyButton.disabled = !hasMarkdown;
+  downloadButton.disabled = !hasMarkdown;
+  exportButton.disabled = !hasMarkdown;
+
+  if (message) {
+    markdownStatus.textContent = message;
+    return;
+  }
+
+  markdownStatus.textContent = hasMarkdown
+    ? "DeepSeek 已生成 Markdown，可以复制或下载。"
+    : "Transcript 准备好后，点击 DeepSeek 分析，这里才会生成可下载的 Obsidian Markdown。";
 }
 
 function getEpisodeTranscriptText(episode) {
@@ -230,112 +278,6 @@ function setupAudioForEpisode(episode) {
   syncTranscriptWithAudio(parseTimeToSeconds(activeEpisode.transcript?.[0]?.[0]), { force: true, scroll: false });
 }
 
-function generateNote() {
-  const template = document.querySelector("#templateSelect").value;
-  const tags = document.querySelector("#tagInput").value;
-  const chapterList = activeEpisode.chapters.map(([time, title, summary]) => `- [${time}] ${title}：${summary}`).join("\n");
-  const fallbackTranscript = activeEpisode.hasTranscript === false ? "" : activeEpisode.transcript.map(([time, line]) => `[${time}] ${line}`).join("\n");
-  const transcriptText = rawTranscript.value.trim() || fallbackTranscript;
-  const transcriptLines = transcriptText.split("\n").filter(Boolean);
-  const quoteList = transcriptLines.slice(0, 6).map((line) => `> ${line}`).join("\n\n");
-  const extractedPoints = buildPointsFromTranscript(transcriptText);
-
-  const blocks = {
-    knowledge: `# ${activeEpisode.title}
-
-${tags}
-
-## 一句话总结
-这期节目讨论了「${activeEpisode.title}」。下面的整理基于完整 transcript，不直接依赖节目简介，所以后续可以替换成真实转写文本。
-
-## 主要内容
-${chapterList}
-
-## 从 transcript 提取的重点
-${extractedPoints}
-
-## 相关知识点
-- 桌面端播客：适合长时间收听、资料检索和笔记整理。
-- 中文字幕：让音频内容具备搜索、引用和复盘能力。
-- AI 摘要：应保留论点、例子、疑问和行动项，而不是只做短摘要。
-- Obsidian 工作流：用标签、双链、时间戳把播客内容沉淀为知识库。
-
-## 可行动事项
-- 找到这期节目中值得二次研究的 2 个概念。
-- 把一个观点拆成独立卡片，并链接到已有主题。
-- 回听一个带时间戳的关键片段，补充原始语境。
-
-## 原声摘录
-${quoteList}
-
-## Transcript 原文
-${transcriptText}
-`,
-    meeting: `# ${activeEpisode.title}
-
-${tags}
-
-## 原始材料
-整理依据：完整 transcript
-
-## 议题
-${chapterList}
-
-## 从 transcript 提取的重点
-${extractedPoints}
-
-## 决策与判断
-- 播客桌面端的机会在于整合收听、字幕、摘要和知识库。
-- 导出格式优先选择 Markdown，便于进入 Obsidian。
-
-## 后续动作
-- 设计 RSS 导入。
-- 接入转写和翻译。
-- 生成 Obsidian 模板。
-`,
-    zettel: `# ${activeEpisode.title}
-
-${tags}
-
-## Permanent note
-播客内容的长期价值不在播放完成，而在完整 transcript 能否被重新组织成个人知识系统里的观点、证据和链接。桌面端播放器如果能把转写、时间戳、摘要和 Markdown 导出放在同一界面，就能把音频消费变成知识生产。
-
-## Extracted points
-${extractedPoints}
-
-## Links
-- [[播客]]
-- [[知识管理]]
-- [[Obsidian]]
-
-## Evidence
-${quoteList}
-`
-  };
-
-  noteOutput.value = blocks[template];
-  updatePipeline("local");
-}
-
-function buildPointsFromTranscript(text) {
-  const lines = text
-    .split("\n")
-    .map((line) => line.replace(/^\[[^\]]+\]\s*/, "").trim())
-    .filter(Boolean);
-
-  if (!lines.length) {
-    return "- 暂无 transcript 内容。";
-  }
-
-  return lines
-    .slice(0, 5)
-    .map((line) => {
-      const clipped = line.length > 44 ? `${line.slice(0, 44)}...` : line;
-      return `- ${clipped}`;
-    })
-    .join("\n");
-}
-
 function progressToTime(progress, duration) {
   if (!duration || duration === "未知时长") return "00:00";
   const total = parseTimeToSeconds(duration);
@@ -401,12 +343,11 @@ function updatePipeline(state) {
   const analyzeStep = document.querySelector("#stepAnalyze");
   const exportStep = document.querySelector("#stepExport");
   analyzeStep.classList.toggle("active", state === "analyzing");
-  analyzeStep.classList.toggle("done", state === "ai" || state === "local" || state === "exported");
+  analyzeStep.classList.toggle("done", state === "ai" || state === "exported");
   exportStep.classList.toggle("done", state === "exported");
 
   const labels = {
     idle: "等待 DeepSeek",
-    local: "已本地整理",
     analyzing: "正在分析",
     ai: "已用 AI 整理",
     error: "分析失败",
@@ -644,8 +585,8 @@ async function analyzeWithDeepSeek() {
     if (!response.ok) {
       const errorText = await response.text();
       if (response.status === 400 && errorText.includes("DeepSeek API Key")) {
-        generateNote();
-        showToast("没有 API Key，已先用本地规则整理");
+        updatePipeline("error");
+        showToast("缺少 DeepSeek API Key");
         return;
       }
       throw new Error(errorText || `HTTP ${response.status}`);
@@ -655,12 +596,11 @@ async function analyzeWithDeepSeek() {
     const markdown = data.choices?.[0]?.message?.content?.trim();
     if (!markdown) throw new Error("DeepSeek 没有返回可用内容");
 
-    noteOutput.value = markdown;
-    updatePipeline("ai");
+    setMarkdownOutput(markdown, "ai");
     showToast("DeepSeek 已生成笔记");
   } catch (error) {
     updatePipeline("error");
-    showToast("DeepSeek 请求失败，已保留本地笔记");
+    showToast("DeepSeek 请求失败，Markdown 未更新");
     console.error(error);
   } finally {
     deepseekButton.disabled = false;
@@ -809,7 +749,7 @@ function applyTranscript(text, source) {
   rawTranscript.value = text;
   renderTranscriptPreview();
   updateTranscriptStatus(`已从${transcriptSourceLabel(source.sourceType)}载入 transcript。`);
-  generateNote();
+  clearMarkdownOutput("Transcript 已准备好。点击 DeepSeek 分析后，这里会生成 Markdown。");
 }
 
 function transcriptSourceLabel(sourceType = "") {
@@ -896,12 +836,23 @@ function findTranscriptIndexAtTime(rows, currentSeconds) {
 }
 
 async function exportToObsidian() {
-  downloadMarkdown();
+  if (!noteOutput.value.trim()) {
+    showToast("请先点击 DeepSeek 分析生成 Markdown");
+    return;
+  }
+
+  if (!downloadMarkdown()) return;
   updatePipeline("exported");
   showToast("已生成 Markdown 文件");
 }
 
 function downloadMarkdown() {
+  const markdown = noteOutput.value.trim();
+  if (!markdown) {
+    showToast("请先点击 DeepSeek 分析生成 Markdown");
+    return false;
+  }
+
   const blob = new Blob([noteOutput.value], { type: "text/markdown;charset=utf-8" });
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
@@ -909,6 +860,7 @@ function downloadMarkdown() {
   link.download = `${activeEpisode.title}.md`;
   link.click();
   URL.revokeObjectURL(url);
+  return true;
 }
 
 function downloadTranscript() {
@@ -1315,20 +1267,30 @@ document.querySelector("#translateButton").addEventListener("click", () => {
   renderEpisode();
 });
 
-document.querySelector("#regenerateButton").addEventListener("click", () => {
-  generateNote();
-  showToast("已根据 transcript 重新整理");
+document.querySelector("#templateSelect").addEventListener("change", () => {
+  clearMarkdownOutput("笔记模板已改变，请重新点击 DeepSeek 分析。");
 });
-
-document.querySelector("#templateSelect").addEventListener("change", generateNote);
-document.querySelector("#tagInput").addEventListener("input", generateNote);
+document.querySelector("#tagInput").addEventListener("input", () => {
+  clearMarkdownOutput("标签已改变，请重新点击 DeepSeek 分析。");
+});
 rawTranscript.addEventListener("input", () => {
   activeEpisode.rawTranscript = rawTranscript.value;
   activeEpisode.hasTranscript = Boolean(rawTranscript.value.trim());
   activeEpisode.transcript = transcriptTextToRows(rawTranscript.value);
   renderTranscriptPreview();
   updateTranscriptStatus();
-  generateNote();
+  clearMarkdownOutput(
+    rawTranscript.value.trim()
+      ? "Transcript 已更新。点击 DeepSeek 分析后，这里会生成 Markdown。"
+      : "Transcript 准备好后，点击 DeepSeek 分析，这里才会生成可下载的 Obsidian Markdown。"
+  );
+});
+
+noteOutput.addEventListener("input", () => {
+  activeEpisode.markdown = noteOutput.value;
+  activeEpisode.markdownState = noteOutput.value.trim() ? activeEpisode.markdownState || "ai" : "idle";
+  updateMarkdownControls();
+  if (!noteOutput.value.trim()) updatePipeline("idle");
 });
 
 document.querySelector("#saveSettingsButton").addEventListener("click", saveSettings);
@@ -1341,17 +1303,20 @@ downloadTranscriptButton.addEventListener("click", () => {
   showToast("已生成 transcript 文件");
 });
 
-document.querySelector("#copyButton").addEventListener("click", async () => {
+copyButton.addEventListener("click", async () => {
+  if (!noteOutput.value.trim()) {
+    showToast("请先点击 DeepSeek 分析生成 Markdown");
+    return;
+  }
   await navigator.clipboard.writeText(noteOutput.value);
   showToast("Markdown 已复制");
 });
 
-document.querySelector("#downloadButton").addEventListener("click", () => {
-  downloadMarkdown();
-  showToast("已生成 Markdown 文件");
+downloadButton.addEventListener("click", () => {
+  if (downloadMarkdown()) showToast("已生成 Markdown 文件");
 });
 
-document.querySelector("#exportButton").addEventListener("click", exportToObsidian);
+exportButton.addEventListener("click", exportToObsidian);
 
 document.querySelector("#importButton").addEventListener("click", () => loadRssFeed());
 document.querySelector("#rssInput").addEventListener("keydown", (event) => {

@@ -201,7 +201,8 @@ code {
 
 .import-form input::placeholder,
 .search input::placeholder,
-.raw-transcript::placeholder {
+.raw-transcript::placeholder,
+.note-output::placeholder {
   color: var(--muted-soft);
 }
 
@@ -641,7 +642,8 @@ input[type="range"] {
   flex-wrap: wrap;
 }
 
-.transcript-helper {
+.transcript-helper,
+.markdown-helper {
   margin-top: -4px;
   color: var(--muted);
   font-size: 13px;
@@ -668,6 +670,14 @@ input[type="range"] {
     ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono",
     "Courier New", monospace;
   font-size: 13px;
+}
+
+.note-output.empty {
+  color: var(--muted);
+}
+
+.note-output:read-only {
+  cursor: default;
 }
 
 .markdown-panel {

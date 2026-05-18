@@ -3,9 +3,9 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="podnote-version" content="0.15.0" />
+    <meta name="podnote-version" content="0.15.1" />
     <title>PodNote</title>
-    <link rel="stylesheet" href="./styles.css?v=0.15.0" />
+    <link rel="stylesheet" href="./styles.css?v=0.15.1" />
   </head>
   <body>
     <div class="app-frame">
@@ -124,7 +124,6 @@
 
             <div class="action-row">
               <button class="primary-button" id="deepseekButton" type="button">DeepSeek 分析</button>
-              <button class="secondary-button" id="regenerateButton" type="button">本地整理</button>
             </div>
 
             <div class="status-pills" aria-label="处理状态">
@@ -143,7 +142,15 @@
               <h2>下载 Markdown</h2>
             </div>
           </div>
-          <textarea id="noteOutput" class="note-output" spellcheck="false" aria-label="Markdown 笔记"></textarea>
+          <p class="markdown-helper" id="markdownStatus">Transcript 准备好后，点击 DeepSeek 分析，这里才会生成可下载的 Obsidian Markdown。</p>
+          <textarea
+            id="noteOutput"
+            class="note-output"
+            spellcheck="false"
+            aria-label="Markdown 笔记"
+            placeholder="等待 DeepSeek 分析结果..."
+            readonly
+          ></textarea>
           <div class="note-actions">
             <button class="secondary-button" id="copyButton" type="button">复制</button>
             <button class="primary-button" id="downloadButton" type="button">下载 .md</button>
@@ -171,6 +178,6 @@
     </div>
 
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
-    <script src="./app.js?v=0.15.0"></script>
+    <script src="./app.js?v=0.15.1"></script>
   </body>
 </html>
