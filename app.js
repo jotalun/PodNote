@@ -96,12 +96,18 @@ const audioStatus = document.querySelector("#audioStatus");
 const captionTime = document.querySelector("#captionTime");
 const captionText = document.querySelector("#captionText");
 const quotaBadge = document.querySelector("#quotaBadge");
+const usageButton = document.querySelector("#usageButton");
 const guideButton = document.querySelector("#guideButton");
 const configButton = document.querySelector("#configButton");
+const refreshUsageButton = document.querySelector("#refreshUsageButton");
 const refreshConfigButton = document.querySelector("#refreshConfigButton");
+const usageIdentity = document.querySelector("#usageIdentity");
+const usageGrid = document.querySelector("#usageGrid");
+const usageSummary = document.querySelector("#usageSummary");
 const configStatusList = document.querySelector("#configStatusList");
 const configSummary = document.querySelector("#configSummary");
 let activeTranscriptIndex = -1;
+let latestQuota = null;
 
 function renderEpisodes(items = episodes) {
   episodeList.replaceChildren(...items.map(createEpisodeCard));
@@ -342,6 +348,7 @@ async function loadAccount() {
     if (!response.ok) throw new Error("额度读取失败");
     const data = await response.json();
     updateQuotaBadge(data.quota);
+    if (isModalOpen("usageModal")) renderUsageStatus(data);
   } catch {
     quotaBadge.textContent = "额度暂不可用";
   }
@@ -349,6 +356,7 @@ async function loadAccount() {
 
 function updateQuotaBadge(quota) {
   if (!quotaBadge || !quota?.remaining || !quota?.limits) return;
+  latestQuota = quota;
   const transcribeLeft = formatRemaining(quota.remaining.monthlyTranscribeMinutes, quota.limits.monthlyTranscribeMinutes, "分钟");
   const analyzeLeft = formatRemaining(quota.remaining.monthlyAnalyzeCount, quota.limits.monthlyAnalyzeCount, "次分析");
   quotaBadge.textContent = `${quota.user?.label || "内测用户"} · 转写 ${transcribeLeft} · ${analyzeLeft}`;
@@ -371,6 +379,11 @@ function openModal(id) {
   const modal = document.querySelector(`#${id}`);
   if (!modal) return;
   modal.hidden = false;
+}
+
+function isModalOpen(id) {
+  const modal = document.querySelector(`#${id}`);
+  return Boolean(modal && !modal.hidden);
 }
 
 function closeModal(id) {
@@ -465,6 +478,79 @@ function formatConfigLimit(value, unit) {
 function formatCurrencyLimit(value) {
   const number = Number(value || 0);
   return number > 0 ? `$${number}/天` : "未设置";
+}
+
+async function loadUsageStatus() {
+  if (!usageGrid || !usageSummary || !usageIdentity) return;
+  usageIdentity.textContent = latestQuota?.user?.label ? `${latestQuota.user.label} · ${latestQuota.user.plan || "free"}` : "正在读取当前账号...";
+  usageGrid.replaceChildren(createMutedLine("正在读取最新额度..."));
+  usageSummary.textContent = "";
+
+  try {
+    const response = await fetch("/api/me");
+    const data = await response.json();
+    if (!response.ok || !data.ok || !data.quota) throw new Error(data.error || "额度读取失败");
+    updateQuotaBadge(data.quota);
+    renderUsageStatus(data);
+  } catch (error) {
+    usageGrid.replaceChildren(createMutedLine(error.message || "额度读取失败，请稍后再试。"));
+    usageSummary.textContent = "";
+  }
+}
+
+function renderUsageStatus(data) {
+  const quota = data.quota || data;
+  if (!usageGrid || !usageSummary || !usageIdentity || !quota?.usage || !quota?.limits) return;
+
+  const user = quota.user || {};
+  usageIdentity.textContent = `${user.label || "内测用户"} · ${user.plan || "free"} 套餐`;
+  const cards = [
+    createUsageCard("本月转写", quota.usage.monthlyTranscribeMinutes, quota.limits.monthlyTranscribeMinutes, quota.remaining.monthlyTranscribeMinutes, "分钟"),
+    createUsageCard("今日转写", quota.usage.dailyTranscribeMinutes, quota.limits.dailyTranscribeMinutes, quota.remaining.dailyTranscribeMinutes, "分钟"),
+    createUsageCard("DeepSeek 分析", quota.usage.monthlyAnalyzeCount, quota.limits.monthlyAnalyzeCount, quota.remaining.monthlyAnalyzeCount, "次"),
+    createUsageCard("全站今日转写", quota.usage.globalDailyTranscribeMinutes, quota.limits.globalDailyTranscribeMinutes, quota.remaining.globalDailyTranscribeMinutes, "分钟"),
+    createUsageCard("全站今日预算", quota.usage.globalDailyCostUsd, quota.limits.globalDailyCostUsd, quota.remaining.globalDailyCostUsd, "美元", { currency: true })
+  ];
+
+  usageGrid.replaceChildren(...cards);
+  usageSummary.textContent = "如果某项额度用完，系统会暂停新的转写或分析请求。公开内测前，建议把全站每日预算设置成你能接受的金额。";
+}
+
+function createUsageCard(title, usedValue, limitValue, remainingValue, unit, options = {}) {
+  const limit = Number(limitValue || 0);
+  const used = Number(usedValue || 0);
+  const remaining = remainingValue === null || remainingValue === undefined ? null : Number(remainingValue || 0);
+  const card = document.createElement("article");
+  card.className = "usage-card";
+
+  const top = document.createElement("div");
+  top.className = "usage-card-top";
+  const heading = document.createElement("strong");
+  heading.textContent = title;
+  const remainingLabel = document.createElement("span");
+  remainingLabel.textContent = remaining === null ? "不限" : `剩余 ${formatUsageValue(remaining, unit, options)}`;
+  top.append(heading, remainingLabel);
+
+  const value = document.createElement("p");
+  value.textContent = limit > 0
+    ? `${formatUsageValue(used, unit, options)} / ${formatUsageValue(limit, unit, options)}`
+    : `${formatUsageValue(used, unit, options)} / 不限`;
+
+  const meter = document.createElement("div");
+  meter.className = "usage-meter";
+  const fill = document.createElement("span");
+  fill.style.width = `${limit > 0 ? Math.min(100, Math.max(0, (used / limit) * 100)) : 0}%`;
+  meter.append(fill);
+
+  card.append(top, value, meter);
+  return card;
+}
+
+function formatUsageValue(value, unit, options = {}) {
+  const number = Number(value || 0);
+  if (options.currency) return `$${number.toFixed(2)}`;
+  const rounded = Number.isInteger(number) ? number : number.toFixed(1);
+  return `${rounded} ${unit}`;
 }
 
 function loadSettings() {
@@ -1372,11 +1458,16 @@ function hashString(value) {
   return Math.abs(hash).toString(36);
 }
 
+usageButton?.addEventListener("click", () => {
+  openModal("usageModal");
+  loadUsageStatus();
+});
 guideButton?.addEventListener("click", () => openModal("guideModal"));
 configButton?.addEventListener("click", () => {
   openModal("configModal");
   loadConfigStatus();
 });
+refreshUsageButton?.addEventListener("click", loadUsageStatus);
 refreshConfigButton?.addEventListener("click", loadConfigStatus);
 
 document.querySelectorAll("[data-close-modal]").forEach((button) => {

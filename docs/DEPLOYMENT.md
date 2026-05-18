@@ -1,6 +1,6 @@
 # Cloudflare 部署说明
 
-版本：`0.17.0`
+版本：`0.18.0`
 更新日期：2026-05-18
 
 ## 线上版能做什么
@@ -15,6 +15,7 @@ Cloudflare 线上版支持：
 - 通过 `/api/config` 检查线上配置状态。
 - 生成和下载 Markdown。
 - 用邀请码保护未完善的预览版本。
+- 显示当前用户额度用量。
 - 用 Cloudflare KV 记录用户额度和 transcript 缓存。
 
 Cloudflare 线上版不支持直接写入你电脑里的 Obsidian Vault。当前主流程统一为下载 Markdown。
