@@ -198,11 +198,19 @@ function updateMarkdownControls(message = "") {
 function getEpisodeTranscriptText(episode) {
   if (typeof episode.rawTranscript === "string") return episode.rawTranscript;
   if (episode.hasTranscript === false) return "";
+  if (isStarterEpisode(episode)) return "";
   return (episode.transcript || []).map(([time, line]) => `[${time}] ${line}`).join("\n");
 }
 
+function isStarterEpisode(episode) {
+  return !episode.audioUrl && !episode.sourceUrl && !episode.webUrl;
+}
+
 function renderTranscriptPreview() {
-  const transcriptRows = activeEpisode.transcript?.length ? activeEpisode.transcript : [["00:00", "请先粘贴 transcript，或点击自动查找公开文字稿。", ""]];
+  const guideLine = isStarterEpisode(activeEpisode)
+    ? "先在顶部粘贴小宇宙、RSS 或播客网页链接。真实节目导入后，字幕会出现在这里。"
+    : "请先粘贴 transcript，或点击自动查找公开文字稿。";
+  const transcriptRows = !isStarterEpisode(activeEpisode) && activeEpisode.transcript?.length ? activeEpisode.transcript : [["00:00", guideLine, ""]];
   transcriptEl.innerHTML = transcriptRows
     .map(
       ([time, line, english], index) => `
@@ -231,6 +239,11 @@ function updateTranscriptStatus(message = "") {
   if (hasText) {
     const lineCount = rawTranscript.value.split("\n").filter(Boolean).length;
     transcriptStatus.textContent = `已载入 transcript，共 ${lineCount} 行。`;
+    return;
+  }
+
+  if (isStarterEpisode(activeEpisode)) {
+    transcriptStatus.textContent = "这里先保持空白。请先在顶部粘贴小宇宙、RSS 或播客网页链接并解析；也可以直接粘贴已有 transcript。";
     return;
   }
 

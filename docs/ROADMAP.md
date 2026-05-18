@@ -1,6 +1,6 @@
 # 后续路线图
 
-版本：`0.15.1`  
+版本：`0.15.2`  
 更新日期：2026-05-18
 
 ## 最近要做
@@ -37,6 +37,7 @@
 - transcript 下载。
 - DeepSeek 默认输出 Obsidian 知识库笔记结构。
 - Markdown 下载区只在 DeepSeek 分析成功后显示内容。
+- 初始示例节目不再预填 sample transcript。
 
 优先方案：
 
