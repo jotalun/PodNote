@@ -138,7 +138,7 @@ function handleUnauthorized(response, url) {
   }
 
   response.writeHead(200, { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store" });
-  response.end(renderLoginPage({ error: url.searchParams.get("auth") === "failed", setup: !hasInviteConfiguration(process.env) || !process.env.PODNOTE_SESSION_SECRET, next: `${url.pathname}${url.search}` }));
+  response.end(renderLoginPage({ error: url.searchParams.get("auth") === "failed", setup: !hasInviteConfiguration(process.env), next: `${url.pathname}${url.search}` }));
 }
 
 function safeNext(value) {

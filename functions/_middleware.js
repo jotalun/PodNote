@@ -48,7 +48,7 @@ export async function onRequest(context) {
     });
   }
 
-  return new Response(renderLoginPage({ error: url.searchParams.get("auth") === "failed", setup: !hasInviteConfiguration(env) || !env.PODNOTE_SESSION_SECRET, next: `${url.pathname}${url.search}` }), {
+  return new Response(renderLoginPage({ error: url.searchParams.get("auth") === "failed", setup: !hasInviteConfiguration(env), next: `${url.pathname}${url.search}` }), {
     status: 200,
     headers: {
       "Content-Type": "text/html; charset=utf-8",
