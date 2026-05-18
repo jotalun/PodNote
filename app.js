@@ -243,7 +243,7 @@ function updateTranscriptStatus(message = "") {
   }
 
   if (isStarterEpisode(activeEpisode)) {
-    transcriptStatus.textContent = "这里先保持空白。请先在顶部粘贴小宇宙、RSS 或播客网页链接并解析；也可以直接粘贴已有 transcript。";
+    transcriptStatus.textContent = "请先在顶部粘贴小宇宙、RSS 或播客网页链接并解析；也可以直接粘贴已有 transcript。";
     return;
   }
 
